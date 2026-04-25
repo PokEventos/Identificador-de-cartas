@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PokéScan — Reconhecedor de Cartas</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --yellow: #f5c842;
+    --blue: #4a9eff;
+    --red: #ff4a6e;
+    --green: #3dffa0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(74,158,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 80% 80%, rgba(245,200,66,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 36px 16px 80px;
+  }
+  header { text-align: center; margin-bottom: 36px; }
+  .logo-line { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; }
+  .pokeball-icon { width: 36px; height: 36px; flex-shrink: 0; }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.6rem, 8vw, 4.2rem);
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--yellow) 0%, #ffaa00 40%, var(--blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+  .tagline { color: var(--muted); font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; }
+
+  .mode-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 20px;
+    gap: 4px;
+  }
+  .mode-btn {
+    flex: 1; padding: 10px; border: none; border-radius: 9px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; background: transparent; color: var(--muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mode-btn.active { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+  .upload-zone {
+    background: var(--surface); border: 2px dashed var(--border); border-radius: 18px;
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+  }
+  .upload-zone:hover { border-color: var(--yellow); background: #14141f; transform: translateY(-2px); }
+  .upload-zone.drag-over { border-color: var(--blue); background: rgba(74,158,255,0.05); }
+  .upload-icon { font-size: 2.8rem; margin-bottom: 10px; display: block; }
+  .upload-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+  .upload-sub { font-size: 0.82rem; color: var(--muted); }
+
+  .action-row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn {
+    flex: 1; padding: 14px 16px; border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: #22223a; border-color: var(--blue); }
+  .btn-secondary:active { transform: scale(0.97); }
+
+  /* Hidden file inputs — kept out of the DOM flow so iOS doesn't block other taps */
+  #fileInputGallery, #fileInputCamera { position: fixed; top: -9999px; left: -9999px; opacity: 0; width: 1px; height: 1px; }
+
+  .preview-wrap { margin-top: 18px; display: none; position: relative; }
+  .preview-wrap.show { display: block; }
+  .preview-img { width: 100%; max-height: 360px; object-fit: contain; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+  .preview-clear {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(10,10,15,0.85); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 6px 12px;
+    font-size: 0.78rem; cursor: pointer; font-family: inherit; font-weight: 600;
+  }
+  .preview-clear:hover { background: rgba(255,74,110,0.2); border-color: var(--red); }
+
+  .scan-btn-wrap { margin-top: 18px; display: none; }
+  .scan-btn-wrap.show { display: block; }
+  .btn-scan {
+    width: 100%; padding: 16px; border: none; border-radius: 14px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--yellow), #ffaa00);
+    color: #0a0a0f; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-scan:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,200,66,0.3); }
+  .btn-scan:active { transform: scale(0.98); }
+  .btn-scan:disabled { background: #2a2a3d; color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .loading { display: none; text-align: center; padding: 40px 20px; }
+  .loading.show { display: block; }
+  .pokeball-spin { width: 52px; height: 52px; margin: 0 auto 18px; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 0.92rem; color: var(--muted); }
+  .loading-steps { margin-top: 10px; font-size: 0.78rem; color: #4a4a6a; }
+
+  .error-box { display: none; background: rgba(255,74,110,0.08); border: 1px solid rgba(255,74,110,0.3); border-radius: 12px; padding: 14px 18px; margin-top: 14px; font-size: 0.88rem; color: #ff8a9e; }
+  .error-box.show { display: block; animation: fadeUp 0.3s both; }
+
+  /* Single result */
+  .results { display: none; margin-top: 28px; }
+  .results.show { display: block; animation: fadeUp 0.4s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .result-header { background: linear-gradient(135deg, #1a1a28, #14141f); border-bottom: 1px solid var(--border); padding: 18px 22px; display: flex; align-items: center; gap: 12px; }
+  .result-badge { background: var(--yellow); color: #0a0a0f; font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; letter-spacing: 2px; padding: 4px 10px; border-radius: 6px; flex-shrink: 0; }
+  .result-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; letter-spacing: 1px; color: var(--text); line-height: 1; }
+  .result-body { padding: 20px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 420px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .info-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .info-value { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+  .info-value.highlight { color: var(--yellow); }
+  .info-value.blue { color: var(--blue); }
+  .info-value.green { color: var(--green); }
+  .info-value.red { color: var(--red); }
+  .confidence-wrap { margin-bottom: 18px; }
+  .confidence-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 7px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+  .confidence-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .confidence-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--yellow), var(--green)); transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1); width: 0; }
+  .analysis-section { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .analysis-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .analysis-text { font-size: 0.88rem; color: var(--text); line-height: 1.65; white-space: pre-line; }
+  .types-row { display: flex; gap: 7px; flex-wrap: wrap; }
+  .type-badge { padding: 4px 13px; border-radius: 99px; font-size: 0.76rem; font-weight: 700; }
+  .type-fire { background: rgba(255,100,60,0.2); color: #ff7a50; border: 1px solid rgba(255,100,60,0.3); }
+  .type-water { background: rgba(74,158,255,0.2); color: #4a9eff; border: 1px solid rgba(74,158,255,0.3); }
+  .type-grass { background: rgba(61,255,160,0.15); color: #3dffa0; border: 1px solid rgba(61,255,160,0.25); }
+  .type-electric { background: rgba(245,200,66,0.15); color: #f5c842; border: 1px solid rgba(245,200,66,0.25); }
+  .type-psychic { background: rgba(255,100,200,0.15); color: #ff8ad8; border: 1px solid rgba(255,100,200,0.25); }
+  .type-dragon { background: rgba(100,80,255,0.2); color: #9080ff; border: 1px solid rgba(100,80,255,0.3); }
+  .type-dark { background: rgba(80,60,100,0.3); color: #c09ee0; border: 1px solid rgba(80,60,100,0.4); }
+  .type-normal { background: rgba(180,180,180,0.15); color: #c0c0c0; border: 1px solid rgba(180,180,180,0.2); }
+  .type-fighting { background: rgba(220,80,50,0.2); color: #e06040; border: 1px solid rgba(220,80,50,0.3); }
+  .type-default { background: rgba(100,100,150,0.2); color: #a0a0c0; border: 1px solid rgba(100,100,150,0.3); }
+  .rarity-stars { color: var(--yellow); letter-spacing: 2px; }
+
+  /* Multi result */
+  .multi-results { display: none; margin-top: 28px; }
+  .multi-results.show { display: block; animation: fadeUp 0.4s ease both; }
+  .multi-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .multi-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 2px; color: var(--yellow); }
+  .multi-count { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  .summary-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .summary-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 13px; font-size: 0.79rem; color: var(--muted); font-weight: 500; }
+  .summary-pill span { color: var(--text); font-weight: 700; }
+  .card-list { display: flex; flex-direction: column; gap: 10px; }
+  .card-row {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px; display: grid; grid-template-columns: 28px 1fr auto;
+    gap: 12px; align-items: start; transition: border-color 0.15s; cursor: pointer;
+  }
+  .card-row:hover { border-color: #3a3a5a; }
+  .card-row.expanded { border-color: var(--yellow); }
+  .card-num { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--muted); text-align: center; padding-top: 2px; }
+  .card-main { min-width: 0; }
+  .card-name-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 4px; }
+  .card-name { font-weight: 700; font-size: 0.97rem; color: var(--text); }
+  .card-lang-badge { font-size: 0.67rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; color: var(--muted); font-weight: 600; }
+  .card-sub { font-size: 0.79rem; color: var(--muted); }
+  .card-right { text-align: right; flex-shrink: 0; }
+  .card-rarity-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 6px; margin-bottom: 5px; letter-spacing: 0.5px; }
+  .rarity-sir { background: rgba(245,200,66,0.15); color: var(--yellow); border: 1px solid rgba(245,200,66,0.3); }
+  .rarity-ur { background: rgba(74,158,255,0.15); color: var(--blue); border: 1px solid rgba(74,158,255,0.3); }
+  .rarity-r { background: rgba(61,255,160,0.1); color: var(--green); border: 1px solid rgba(61,255,160,0.2); }
+  .rarity-c { background: rgba(100,100,150,0.15); color: var(--muted); border: 1px solid var(--border); }
+  .card-condition { font-size: 0.74rem; color: var(--muted); }
+  .card-price { font-size: 0.78rem; color: var(--yellow); font-weight: 700; margin-top: 3px; }
+  .card-detail {
+    display: none; grid-column: 1 / -1;
+    background: var(--surface2); border-radius: 10px; padding: 14px; margin-top: 4px;
+    font-size: 0.84rem; line-height: 1.6; color: var(--text); border: 1px solid var(--border);
+  }
+  .card-detail.show { display: block; animation: fadeUp 0.2s both; }
+  .card-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  @media (max-width: 420px) { .card-detail-grid { grid-template-columns: 1fr; } }
+  .detail-item { background: var(--surface); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border); }
+  .detail-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+  .detail-value { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+  .detail-analysis { font-size: 0.83rem; color: #b0b0c8; line-height: 1.6; margin-bottom: 8px; }
+  .detail-market { font-size: 0.83rem; color: #f0d070; background: rgba(245,200,66,0.06); border: 1px solid rgba(245,200,66,0.15); border-radius: 8px; padding: 8px 10px; }
+  .total-card {
+    margin-top: 16px;
+    background: linear-gradient(135deg, rgba(245,200,66,0.08), rgba(74,158,255,0.05));
+    border: 1px solid rgba(245,200,66,0.25); border-radius: 14px;
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .total-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; }
+  .total-sub { font-size: 0.72rem; color: #4a4a6a; margin-top: 2px; }
+  .total-value { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--yellow); }
+
+  .reset-btn { width: 100%; margin-top: 14px; padding: 12px; background: transparent; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.84rem; font-weight: 500; cursor: pointer; transition: all 0.18s; }
+  .reset-btn:hover { border-color: var(--blue); color: var(--text); }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 20px; max-width: 480px; width: 100%; }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 14px; }
+  video { width: 100%; border-radius: 10px; background: #000; margin-bottom: 12px; }
+  canvas { display: none; }
+  .modal-actions { display: flex; gap: 10px; }
+</style>
+</head>
+<body>
+
+<!-- File inputs fora do fluxo visual — fix iOS Safari -->
+<input type="file" id="fileInputGallery" accept="image/*">
+<input type="file" id="fileInputCamera" accept="image/*" capture="environment">
+
+<div class="container">
+  <header>
+    <div class="logo-line">
+      <svg class="pokeball-icon" viewBox="0 0 38 38" fill="none">
+        <circle cx="19" cy="19" r="18" stroke="#f5c842" stroke-width="2"/>
+        <path d="M1 19h36" stroke="#f5c842" stroke-width="2"/>
+        <circle cx="19" cy="19" r="6" fill="#0a0a0f" stroke="#f5c842" stroke-width="2"/>
+        <circle cx="19" cy="19" r="3" fill="#f5c842"/>
+        <path d="M2 13a18 18 0 0 1 34 0" fill="rgba(255,74,110,0.15)"/>
+      </svg>
+      <h1>PokéScan</h1>
+    </div>
+    <p class="tagline">Reconhecedor de Cartas com IA</p>
+  </header>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeSingle">🃏 Uma carta</button>
+    <button class="mode-btn" id="modeMulti">📦 Várias cartas</button>
+  </div>
+
+  <div class="upload-zone" id="uploadZone">
+    <span class="upload-icon" id="uploadIcon">📷</span>
+    <p class="upload-title" id="uploadTitle">Toque para selecionar uma foto</p>
+    <p class="upload-sub" id="uploadSub">JPG, PNG, WEBP • Até 10MB</p>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-secondary" id="btnGallery">🖼️ Galeria</button>
+    <button class="btn btn-secondary" id="btnCamera">📷 Câmera</button>
+    <button class="btn btn-secondary" id="btnLive">🎥 Ao Vivo</button>
+  </div>
+
+  <div class="preview-wrap" id="previewWrap">
+    <img class="preview-img" id="previewImg" src="" alt="Preview">
+    <button class="preview-clear" id="clearBtn">✕ Remover</button>
+  </div>
+
+  <div class="scan-btn-wrap" id="scanBtnWrap">
+    <button class="btn-scan" id="scanBtn">🔍 IDENTIFICAR CARTA</button>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="loading" id="loading">
+    <svg class="pokeball-spin" viewBox="0 0 56 56" fill="none">
+      <circle cx="28" cy="28" r="27" stroke="#2a2a3d" stroke-width="2"/>
+      <path d="M1 28h54" stroke="#f5c842" stroke-width="2"/>
+      <path d="M2 22a27 27 0 0 1 52 0" fill="rgba(255,74,110,0.15)"/>
+      <circle cx="28" cy="28" r="9" fill="#0a0a0f" stroke="#f5c842" stroke-width="2"/>
+      <circle cx="28" cy="28" r="4" fill="#f5c842"/>
+      <path d="M1 28 A27 27 0 0 1 55 28" stroke="#4a9eff" stroke-width="2" stroke-dasharray="4 4"/>
+    </svg>
+    <p class="loading-text">Analisando com IA...</p>
+    <p class="loading-steps" id="loadingStep">Processando imagem</p>
+  </div>
+
+  <!-- SINGLE RESULT -->
+  <div class="results" id="results">
+    <div class="result-card">
+      <div class="result-header">
+        <div class="result-badge" id="cardCategory">POKÉMON</div>
+        <div class="result-card-name" id="cardName">—</div>
+      </div>
+      <div class="result-body">
+        <div class="confidence-wrap">
+          <div class="confidence-label">
+            <span>Confiança da identificação</span>
+            <span id="confidenceVal">—%</span>
+          </div>
+          <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill"></div></div>
+        </div>
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">Set / Coleção</div><div class="info-value blue" id="cardSet">—</div></div>
+          <div class="info-item"><div class="info-label">Número</div><div class="info-value" id="cardNumber">—</div></div>
+          <div class="info-item"><div class="info-label">Raridade</div><div class="info-value" id="cardRarity">—</div></div>
+          <div class="info-item"><div class="info-label">Condição Estimada</div><div class="info-value green" id="cardCondition">—</div></div>
+          <div class="info-item"><div class="info-label">Idioma</div><div class="info-value" id="cardLang">—</div></div>
+          <div class="info-item"><div class="info-label">Ano / Era</div><div class="info-value" id="cardYear">—</div></div>
+        </div>
+        <div class="analysis-section" id="typesSection">
+          <div class="analysis-title">Tipo(s) do Pokémon</div>
+          <div class="types-row" id="cardTypes"></div>
+        </div>
+        <div class="analysis-section">
+          <div class="analysis-title">Análise Detalhada</div>
+          <p class="analysis-text" id="cardAnalysis">—</p>
+        </div>
+        <div class="analysis-section">
+          <div class="analysis-title">💰 Estimativa de Mercado (BR)</div>
+          <p class="analysis-text" id="cardMarket">—</p>
+        </div>
+        <button class="reset-btn" id="resetBtnSingle">↩ Analisar outra carta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTI RESULT -->
+  <div class="multi-results" id="multiResults">
+    <div class="multi-header">
+      <div class="multi-title">Cartas Identificadas</div>
+      <div class="multi-count" id="multiCount">0 cartas</div>
+    </div>
+    <div class="summary-bar" id="summaryBar"></div>
+    <div class="card-list" id="cardList"></div>
+    <div class="total-card">
+      <div>
+        <div class="total-label">Estimativa Total</div>
+        <div class="total-sub">Condição NM/LP • Mercado BR</div>
+      </div>
+      <div class="total-value" id="totalValue">R$ —</div>
+    </div>
+    <button class="reset-btn" id="resetBtnMulti">↩ Analisar outra foto</button>
+  </div>
+</div>
+
+<!-- Camera Modal -->
+<div class="modal-overlay" id="cameraModal">
+  <div class="modal">
+    <div class="modal-title">📷 Câmera ao Vivo</div>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="captureBtn" style="flex:2;background:var(--yellow);color:#0a0a0f;border:none;font-weight:700;">⚡ Capturar</button>
+      <button class="btn btn-secondary" id="closeCameraBtn" style="flex:1;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentMode = 'single';
+let currentImageBase64 = null;
+let stream = null;
+
+const fileGallery  = document.getElementById('fileInputGallery');
+const fileCamera   = document.getElementById('fileInputCamera');
+const uploadZone   = document.getElementById('uploadZone');
+const previewWrap  = document.getElementById('previewWrap');
+const previewImg   = document.getElementById('previewImg');
+const scanBtnWrap  = document.getElementById('scanBtnWrap');
+const scanBtn      = document.getElementById('scanBtn');
+const loadingEl    = document.getElementById('loading');
+const loadingStep  = document.getElementById('loadingStep');
+const errorBox     = document.getElementById('errorBox');
+const resultsEl    = document.getElementById('results');
+const multiEl      = document.getElementById('multiResults');
+
+// ---- Mode ----
+document.getElementById('modeSingle').addEventListener('click', () => setMode('single'));
+document.getElementById('modeMulti').addEventListener('click', () => setMode('multi'));
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('modeSingle').classList.toggle('active', m === 'single');
+  document.getElementById('modeMulti').classList.toggle('active', m === 'multi');
+  document.getElementById('uploadIcon').textContent  = m === 'multi' ? '📦' : '📷';
+  document.getElementById('uploadTitle').textContent = m === 'multi' ? 'Foto com várias cartas' : 'Toque para selecionar uma foto';
+  document.getElementById('uploadSub').textContent   = m === 'multi' ? 'IA identifica TODAS as cartas visíveis' : 'JPG, PNG, WEBP • Até 10MB';
+  scanBtn.textContent = m === 'multi' ? '🔍 IDENTIFICAR TODAS AS CARTAS' : '🔍 IDENTIFICAR CARTA';
+  resetAll();
+}
+
+// ---- File selection (mobile-safe) ----
+// Each button triggers its own hidden input — no label tricks
+document.getElementById('btnGallery').addEventListener('click', () => { fileGallery.value = ''; fileGallery.click(); });
+document.getElementById('btnCamera').addEventListener('click', () => { fileCamera.value = '';  fileCamera.click(); });
+uploadZone.addEventListener('click', () => { fileGallery.value = ''; fileGallery.click(); });
+
+fileGallery.addEventListener('change', e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
+fileCamera.addEventListener('change',  e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
+
+// Drag & drop
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadImage(f);
+});
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    currentImageBase64 = ev.target.result.split(',')[1];
+    previewImg.src = ev.target.result;
+    previewWrap.classList.add('show');
+    scanBtnWrap.classList.add('show');
+    resultsEl.classList.remove('show');
+    multiEl.classList.remove('show');
+    errorBox.classList.remove('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('clearBtn').addEventListener('click', resetAll);
+document.getElementById('resetBtnSingle').addEventListener('click', () => { resetAll(); scrollTop(); });
+document.getElementById('resetBtnMulti').addEventListener('click',  () => { resetAll(); scrollTop(); });
+function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+function resetAll() {
+  previewWrap.classList.remove('show');
+  scanBtnWrap.classList.remove('show');
+  resultsEl.classList.remove('show');
+  multiEl.classList.remove('show');
+  errorBox.classList.remove('show');
+  currentImageBase64 = null;
+}
+
+// ---- Live camera ----
+document.getElementById('btnLive').addEventListener('click', async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    document.getElementById('video').srcObject = stream;
+    document.getElementById('cameraModal').classList.add('show');
+  } catch { showError('Não foi possível acessar a câmera. Verifique as permissões.'); }
+});
+document.getElementById('closeCameraBtn').addEventListener('click', stopCamera);
+document.getElementById('captureBtn').addEventListener('click', () => {
+  const v = document.getElementById('video');
+  const c = document.getElementById('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  const url = c.toDataURL('image/jpeg', 0.92);
+  currentImageBase64 = url.split(',')[1];
+  previewImg.src = url;
+  previewWrap.classList.add('show');
+  scanBtnWrap.classList.add('show');
+  resultsEl.classList.remove('show');
+  multiEl.classList.remove('show');
+  errorBox.classList.remove('show');
+  stopCamera();
+});
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  document.getElementById('cameraModal').classList.remove('show');
+}
+
+// ---- Scan ----
+scanBtn.addEventListener('click', () => {
+  if (!currentImageBase64) return;
+  currentMode === 'single' ? analyzeSingle() : analyzeMulti();
+});
+
+function startLoading(steps) {
+  scanBtn.disabled = true;
+  loadingEl.classList.add('show');
+  resultsEl.classList.remove('show');
+  multiEl.classList.remove('show');
+  errorBox.classList.remove('show');
+  let i = 0; loadingStep.textContent = steps[0];
+  return setInterval(() => { i = (i + 1) % steps.length; loadingStep.textContent = steps[i]; }, 1500);
+}
+function stopLoading(t) { clearInterval(t); loadingEl.classList.remove('show'); scanBtn.disabled = false; }
+
+// ---- Single ----
+async function analyzeSingle() {
+  const t = startLoading(['Processando imagem...','Reconhecendo a carta...','Identificando set e raridade...','Estimando condição...','Gerando análise...']);
+  const prompt = `Você é um especialista em Pokémon TCG com conhecimento profundo de todas as coleções, sets, raridades e edições em todos os idiomas.
+
+Analise esta imagem de carta Pokémon e responda SOMENTE em JSON válido, sem markdown, sem texto fora do JSON:
+
+{
+  "found": true,
+  "confidence": 92,
+  "category": "Pokémon",
+  "name": "Charizard ex",
+  "set_name": "Obsidian Flames",
+  "set_code": "OBF",
+  "card_number": "125/197",
+  "rarity": "Double Rare",
+  "rarity_symbol": "★★",
+  "types": ["Fogo"],
+  "language": "PT-BR",
+  "year": "2023",
+  "era": "Scarlet & Violet",
+  "condition": "NM (Near Mint)",
+  "condition_notes": "Pequenas marcas nas bordas",
+  "is_holo": true,
+  "market_analysis": "Estimativa de R$80–R$150 no mercado nacional (Liga Pokémon, mypcards).",
+  "analysis": "Charizard ex da coleção Obsidian Flames (2023). HP 330.",
+  "observations": "Sem dobras visíveis."
+}
+
+Se NÃO for carta Pokémon: { "found": false, "reason": "Motivo" }
+Responda SOMENTE o JSON.`;
+  try {
+    const r = await callAPI(prompt, 1200);
+    stopLoading(t);
+    if (!r.found) { showError('❌ ' + (r.reason || 'Não foi possível identificar carta Pokémon.')); return; }
+    renderSingle(r);
+  } catch (e) { stopLoading(t); showError('Erro: ' + e.message); }
+}
+
+// ---- Multi ----
+async function analyzeMulti() {
+  const t = startLoading(['Mapeando cartas na foto...','Identificando nomes e sets...','Verificando raridades...','Estimando condições...','Calculando valores de mercado...','Finalizando relatório...']);
+  const prompt = `Você é um especialista em Pokémon TCG. Esta imagem contém VÁRIAS cartas Pokémon dispostas na mesa.
+
+Identifique TODAS as cartas visíveis e responda SOMENTE em JSON válido, sem markdown:
+
+{
+  "total": 5,
+  "cards": [
+    {
+      "position": "Linha 1, coluna 1 (topo-esquerda)",
+      "name": "Espeon ex",
+      "set_name": "Paldean Fates",
+      "set_code": "PAF",
+      "card_number": "TBD",
+      "rarity": "Special Illustration Rare",
+      "rarity_tier": "SIR",
+      "language": "PT-BR",
+      "condition": "NM",
+      "types": ["Psíquico"],
+      "is_holo": true,
+      "analysis": "SIR com arte floral full art. Borda rosa.",
+      "market_min": 120,
+      "market_max": 200,
+      "market_note": "Alta demanda. SIR da série Destinos de Paldea."
+    }
+  ],
+  "collection_notes": "Coleção mista com cartas JP, PT-BR e KR. Destaques: SIRs da fileira 1 e cartas douradas.",
+  "total_min": 500,
+  "total_max": 900
+}
+
+rarity_tier: "SIR" = Special Illustration Rare, "UR" = Ultra Rare/GX/V/ex Double Rare, "IR" = Illustration Rare, "R" = Rare Holo, "C" = Common/Uncommon.
+market_min e market_max em BRL (mercado brasileiro, condição NM).
+Identifique TODAS as cartas, mesmo parcialmente visíveis.
+Responda SOMENTE o JSON.`;
+  try {
+    const r = await callAPI(prompt, 4000);
+    stopLoading(t);
+    if (!r.cards?.length) { showError('❌ Nenhuma carta identificada na imagem.'); return; }
+    renderMulti(r);
+  } catch (e) { stopLoading(t); showError('Erro: ' + e.message); }
+}
+
+async function callAPI(prompt, maxTokens) {
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: currentImageBase64 } },
+        { type: 'text', text: prompt }
+      ]}]
+    })
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const d = await res.json();
+  const raw = d.content.map(b => b.text || '').join('').replace(/```json|```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+// ---- Render Single ----
+function renderSingle(r) {
+  document.getElementById('cardCategory').textContent = r.category || 'CARTA';
+  document.getElementById('cardName').textContent = r.name || '—';
+  document.getElementById('cardSet').textContent = [r.set_name, r.set_code].filter(Boolean).join(' · ') || '—';
+  document.getElementById('cardNumber').textContent = r.card_number || '—';
+  document.getElementById('cardRarity').innerHTML = (r.rarity||'—') + (r.rarity_symbol?` <span class="rarity-stars">${r.rarity_symbol}</span>`:'');
+  const ce = document.getElementById('cardCondition');
+  ce.textContent = r.condition||'—';
+  const cl = (r.condition||'').toLowerCase();
+  ce.className = 'info-value ' + (cl.includes('nm')||cl.includes('mint') ? 'green' : cl.includes('lp') ? 'highlight' : 'red');
+  document.getElementById('cardLang').textContent = r.language||'—';
+  document.getElementById('cardYear').textContent = [r.year,r.era].filter(Boolean).join(' · ')||'—';
+  const conf = Math.min(100,Math.max(0,r.confidence||0));
+  document.getElementById('confidenceVal').textContent = conf+'%';
+  setTimeout(()=>{ document.getElementById('confidenceFill').style.width = conf+'%'; },100);
+  const td = document.getElementById('cardTypes'); td.innerHTML='';
+  const tm = {'fogo':'fire','agua':'water','planta':'grass','eletrico':'electric','psiquico':'psychic','dragao':'dragon','sombrio':'dark','normal':'normal','lutador':'fighting','fire':'fire','water':'water','grass':'grass','electric':'electric','psychic':'psychic','dragon':'dragon','dark':'dark','fighting':'fighting'};
+  (r.types||[]).forEach(t => {
+    const k = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const s = document.createElement('span');
+    s.className = `type-badge type-${tm[k]||'default'}`; s.textContent = t; td.appendChild(s);
+  });
+  if(!(r.types||[]).length) document.getElementById('typesSection').style.display='none';
+  document.getElementById('cardAnalysis').textContent = [r.analysis,r.condition_notes,r.observations].filter(Boolean).join('\n\n');
+  document.getElementById('cardMarket').textContent = r.market_analysis||'—';
+  resultsEl.classList.add('show');
+  setTimeout(()=>resultsEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+// ---- Render Multi ----
+function renderMulti(data) {
+  const cards = data.cards || [];
+  document.getElementById('multiCount').textContent = cards.length + ' carta' + (cards.length!==1?'s':'');
+
+  // Summary
+  const counts = {SIR:0,UR:0,IR:0,R:0,C:0};
+  const langs = {};
+  cards.forEach(c => {
+    const tier = c.rarity_tier || 'C';
+    counts[tier] = (counts[tier]||0)+1;
+    if(c.language) langs[c.language] = (langs[c.language]||0)+1;
+  });
+  const sb = document.getElementById('summaryBar'); sb.innerHTML='';
+  const rl = {SIR:'SIR',UR:'Ultra Rare',IR:'Illus. Rare',R:'Rara',C:'Comum'};
+  Object.entries(counts).forEach(([k,v])=>{ if(!v) return; const p=document.createElement('div'); p.className='summary-pill'; p.innerHTML=`${rl[k]||k}: <span>${v}</span>`; sb.appendChild(p); });
+  Object.entries(langs).forEach(([l,v])=>{ const p=document.createElement('div'); p.className='summary-pill'; p.innerHTML=`${l}: <span>${v}</span>`; sb.appendChild(p); });
+
+  // Cards
+  const cl = document.getElementById('cardList'); cl.innerHTML='';
+  cards.forEach((c,i)=>{
+    const tc = {SIR:'rarity-sir',UR:'rarity-ur',IR:'rarity-r',R:'rarity-r',C:'rarity-c'}[c.rarity_tier||'C']||'rarity-c';
+    const row = document.createElement('div');
+    row.className='card-row';
+    row.innerHTML=`
+      <div class="card-num">${i+1}</div>
+      <div class="card-main">
+        <div class="card-name-row">
+          <span class="card-name">${c.name||'—'}</span>
+          <span class="card-lang-badge">${c.language||'?'}</span>
+          ${c.is_holo?'<span class="card-lang-badge" style="color:#f5c842;border-color:rgba(245,200,66,0.3)">✨</span>':''}
+        </div>
+        <div class="card-sub">${[c.set_name,c.card_number].filter(Boolean).join(' · ')||'—'}</div>
+      </div>
+      <div class="card-right">
+        <div class="card-rarity-badge ${tc}">${c.rarity_tier||'?'}</div>
+        <div class="card-condition">${c.condition||'—'}</div>
+        ${(c.market_min&&c.market_max)?`<div class="card-price">R$${c.market_min}–${c.market_max}</div>`:''}
+      </div>
+      <div class="card-detail" id="det-${i}">
+        <div class="card-detail-grid">
+          <div class="detail-item"><div class="detail-label">Set</div><div class="detail-value">${[c.set_name,c.set_code].filter(Boolean).join(' · ')||'—'}</div></div>
+          <div class="detail-item"><div class="detail-label">Número</div><div class="detail-value">${c.card_number||'—'}</div></div>
+          <div class="detail-item"><div class="detail-label">Raridade</div><div class="detail-value">${c.rarity||c.rarity_tier||'—'}</div></div>
+          <div class="detail-item"><div class="detail-label">Posição</div><div class="detail-value" style="font-size:0.75rem">${c.position||'—'}</div></div>
+        </div>
+        ${c.analysis?`<div class="detail-analysis">${c.analysis}</div>`:''}
+        ${(c.market_min&&c.market_max)?`<div class="detail-market">💰 R$${c.market_min}–R$${c.market_max} (NM) · ${c.market_note||''}</div>`:''}
+      </div>`;
+    row.addEventListener('click',()=>{
+      const d=document.getElementById(`det-${i}`);
+      const open=d.classList.toggle('show');
+      row.classList.toggle('expanded',open);
+    });
+    cl.appendChild(row);
+  });
+
+  const tMin = data.total_min || cards.reduce((s,c)=>s+(c.market_min||0),0);
+  const tMax = data.total_max || cards.reduce((s,c)=>s+(c.market_max||0),0);
+  document.getElementById('totalValue').textContent = (tMin&&tMax)?`R$${tMin}–${tMax}`:'—';
+
+  if(data.collection_notes){
+    const n=document.createElement('div');
+    n.className='analysis-section'; n.style.marginTop='14px';
+    n.innerHTML=`<div class="analysis-title">📝 Notas da Coleção</div><p class="analysis-text">${data.collection_notes}</p>`;
+    cl.after(n);
+  }
+
+  multiEl.classList.add('show');
+  setTimeout(()=>multiEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function showError(msg) { errorBox.textContent=msg; errorBox.classList.add('show'); }
+</script>
+</body>
+</html>
