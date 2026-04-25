@@ -3,199 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>PokéScan — Reconhecedor de Cartas</title>
+<title>PokéScan</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a3d;
-    --yellow: #f5c842; --blue: #4a9eff; --red: #ff4a6e; --green: #3dffa0;
-    --text: #e8e8f0; --muted: #6b6b8a;
+    --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3d;
+    --yellow:#f5c842;--blue:#4a9eff;--red:#ff4a6e;--green:#3dffa0;
+    --text:#e8e8f0;--muted:#6b6b8a;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
-  body::before {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background: radial-gradient(ellipse 60% 40% at 20% 10%,rgba(74,158,255,.07) 0%,transparent 60%),
-                radial-gradient(ellipse 50% 50% at 80% 80%,rgba(245,200,66,.05) 0%,transparent 60%);
-  }
-  .container { position:relative; z-index:1; max-width:800px; margin:0 auto; padding:36px 16px 80px; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(74,158,255,.07) 0%,transparent 60%),
+               radial-gradient(ellipse 50% 50% at 80% 80%,rgba(245,200,66,.05) 0%,transparent 60%);}
+  .container{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:32px 16px 80px;}
 
-  /* Header */
-  header { text-align:center; margin-bottom:32px; }
-  .logo-line { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:6px; }
-  .pokeball-icon { width:34px; height:34px; flex-shrink:0; }
-  h1 {
-    font-family:'Bebas Neue',sans-serif; font-size:clamp(2.4rem,8vw,4rem); letter-spacing:3px; line-height:1;
+  header{text-align:center;margin-bottom:28px;}
+  .logo-line{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px;}
+  .pokeball-icon{width:32px;height:32px;flex-shrink:0;}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.4rem,8vw,3.8rem);letter-spacing:3px;line-height:1;
     background:linear-gradient(135deg,var(--yellow) 0%,#ffaa00 40%,var(--blue) 100%);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-  }
-  .tagline { color:var(--muted); font-size:.83rem; letter-spacing:2px; text-transform:uppercase; font-weight:500; }
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .tagline{color:var(--muted);font-size:.82rem;letter-spacing:2px;text-transform:uppercase;font-weight:500;}
 
-  /* Mode toggle */
-  .mode-toggle { display:flex; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:18px; gap:4px; }
-  .mode-btn { flex:1; padding:10px; border:none; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .18s; background:transparent; color:var(--muted); -webkit-tap-highlight-color:transparent; }
-  .mode-btn.active { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .upload-zone{background:var(--surface);border:2px dashed var(--border);border-radius:18px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s,transform .2s;}
+  .upload-zone:hover{border-color:var(--yellow);background:#14141f;transform:translateY(-2px);}
+  .upload-zone.drag-over{border-color:var(--blue);background:rgba(74,158,255,.05);}
+  .upload-icon{font-size:2.5rem;margin-bottom:8px;display:block;}
+  .upload-title{font-size:.98rem;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .upload-sub{font-size:.8rem;color:var(--muted);}
+  #fileInputGallery,#fileInputCamera{position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;}
 
-  /* Upload */
-  .upload-zone { background:var(--surface); border:2px dashed var(--border); border-radius:18px; padding:38px 20px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s,transform .2s; }
-  .upload-zone:hover { border-color:var(--yellow); background:#14141f; transform:translateY(-2px); }
-  .upload-zone.drag-over { border-color:var(--blue); background:rgba(74,158,255,.05); }
-  .upload-icon { font-size:2.6rem; margin-bottom:10px; display:block; }
-  .upload-title { font-size:1rem; font-weight:600; color:var(--text); margin-bottom:5px; }
-  .upload-sub { font-size:.82rem; color:var(--muted); }
-  #fileInputGallery,#fileInputCamera { position:fixed; top:-9999px; left:-9999px; opacity:0; width:1px; height:1px; }
-  .action-row { display:flex; gap:10px; margin-top:12px; }
-  .btn { flex:1; padding:13px 14px; border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:.87rem; font-weight:600; cursor:pointer; transition:all .18s; display:flex; align-items:center; justify-content:center; gap:7px; -webkit-tap-highlight-color:transparent; }
-  .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-  .btn-secondary:hover { background:#22223a; border-color:var(--blue); }
-  .btn-secondary:active { transform:scale(.97); }
+  .action-row{display:flex;gap:10px;margin-top:12px;}
+  .btn{flex:1;padding:13px 12px;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.86rem;font-weight:600;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px;-webkit-tap-highlight-color:transparent;}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+  .btn-secondary:hover{background:#22223a;border-color:var(--blue);}
+  .btn-secondary:active{transform:scale(.97);}
 
-  /* Preview */
-  .preview-wrap { margin-top:16px; display:none; position:relative; }
-  .preview-wrap.show { display:block; }
-  .preview-img { width:100%; max-height:340px; object-fit:contain; border-radius:14px; border:1px solid var(--border); background:var(--surface); }
-  .preview-clear { position:absolute; top:10px; right:10px; background:rgba(10,10,15,.85); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 12px; font-size:.78rem; cursor:pointer; font-family:inherit; font-weight:600; }
-  .preview-clear:hover { background:rgba(255,74,110,.2); border-color:var(--red); }
+  .preview-wrap{margin-top:14px;display:none;position:relative;}
+  .preview-wrap.show{display:block;}
+  .preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:14px;border:1px solid var(--border);background:var(--surface);}
+  .preview-clear{position:absolute;top:10px;right:10px;background:rgba(10,10,15,.85);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 11px;font-size:.76rem;cursor:pointer;font-family:inherit;font-weight:600;}
+  .preview-clear:hover{background:rgba(255,74,110,.2);border-color:var(--red);}
 
-  /* Scan btn */
-  .scan-btn-wrap { margin-top:16px; display:none; }
-  .scan-btn-wrap.show { display:block; }
-  .btn-scan { width:100%; padding:16px; border:none; border-radius:14px; font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:3px; background:linear-gradient(135deg,var(--yellow),#ffaa00); color:#0a0a0f; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px; -webkit-tap-highlight-color:transparent; }
-  .btn-scan:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(245,200,66,.3); }
-  .btn-scan:active { transform:scale(.98); }
-  .btn-scan:disabled { background:#2a2a3d; color:var(--muted); cursor:not-allowed; transform:none; box-shadow:none; }
+  .scan-btn-wrap{margin-top:14px;display:none;}
+  .scan-btn-wrap.show{display:block;}
+  .btn-scan{width:100%;padding:15px;border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:3px;background:linear-gradient(135deg,var(--yellow),#ffaa00);color:#0a0a0f;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;}
+  .btn-scan:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(245,200,66,.3);}
+  .btn-scan:active{transform:scale(.98);}
+  .btn-scan:disabled{background:#2a2a3d;color:var(--muted);cursor:not-allowed;transform:none;box-shadow:none;}
 
   /* Loading */
-  .loading { display:none; text-align:center; padding:40px 20px; }
-  .loading.show { display:block; }
-  .pokeball-spin { width:50px; height:50px; margin:0 auto 16px; animation:spin 1s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .loading-text { font-size:.9rem; color:var(--muted); }
-  .loading-steps { margin-top:8px; font-size:.76rem; color:#4a4a6a; min-height:1.2em; }
+  .loading{display:none;padding:32px 20px;}
+  .loading.show{display:block;}
+  .pokeball-spin{width:48px;height:48px;margin:0 auto 14px;animation:spin 1s linear infinite;display:block;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-title{text-align:center;font-size:.9rem;color:var(--muted);margin-bottom:16px;}
 
-  /* Step indicator */
-  .step-indicator { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; }
-  .step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); transition:background .3s; }
-  .step-dot.active { background:var(--yellow); }
-  .step-dot.done { background:var(--green); }
+  /* Step list */
+  .step-list{display:flex;flex-direction:column;gap:8px;}
+  .step-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:.84rem;color:var(--muted);transition:all .3s;}
+  .step-item.active{border-color:var(--yellow);color:var(--text);background:#14141f;}
+  .step-item.done{border-color:rgba(61,255,160,.3);color:var(--green);background:rgba(61,255,160,.04);}
+  .step-item.error{border-color:rgba(255,74,110,.3);color:#ff8a9e;}
+  .step-icon{font-size:1rem;flex-shrink:0;width:20px;text-align:center;}
+  .step-text{flex:1;}
+  .step-sub{font-size:.74rem;color:var(--muted);margin-top:2px;}
 
-  /* Error */
-  .error-box { display:none; background:rgba(255,74,110,.08); border:1px solid rgba(255,74,110,.3); border-radius:12px; padding:14px 18px; margin-top:14px; font-size:.87rem; color:#ff8a9e; line-height:1.5; }
-  .error-box.show { display:block; animation:fadeUp .3s both; }
+  .error-box{display:none;background:rgba(255,74,110,.08);border:1px solid rgba(255,74,110,.3);border-radius:12px;padding:14px 18px;margin-top:14px;font-size:.86rem;color:#ff8a9e;line-height:1.5;}
+  .error-box.show{display:block;animation:fadeUp .3s both;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  /* Results */
+  .results{display:none;margin-top:24px;}
+  .results.show{display:block;animation:fadeUp .4s ease both;}
+  .results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .results-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--yellow);}
+  .results-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 11px;font-size:.77rem;color:var(--muted);font-weight:600;}
 
-  /* ===== SINGLE RESULT ===== */
-  .results { display:none; margin-top:26px; }
-  .results.show { display:block; animation:fadeUp .4s ease both; }
-  .result-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; }
-  .result-header { background:linear-gradient(135deg,#1a1a28,#14141f); border-bottom:1px solid var(--border); padding:16px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .result-badge { background:var(--yellow); color:#0a0a0f; font-family:'Bebas Neue',sans-serif; font-size:.7rem; letter-spacing:2px; padding:4px 10px; border-radius:6px; flex-shrink:0; }
-  .result-card-name { font-family:'Bebas Neue',sans-serif; font-size:1.65rem; letter-spacing:1px; color:var(--text); line-height:1; }
-  .result-body { padding:18px; }
-  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-  @media(max-width:420px){.info-grid{grid-template-columns:1fr}}
-  .info-item { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
-  .info-label { font-size:.68rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:600; margin-bottom:4px; }
-  .info-value { font-size:.95rem; font-weight:600; color:var(--text); }
-  .info-value.blue { color:var(--blue); }
-  .info-value.yellow { color:var(--yellow); }
-  .info-value.green { color:var(--green); }
-  .confidence-wrap { margin-bottom:16px; }
-  .confidence-label { display:flex; justify-content:space-between; font-size:.76rem; color:var(--muted); margin-bottom:6px; font-weight:500; text-transform:uppercase; letter-spacing:1px; }
-  .confidence-bar { height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
-  .confidence-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--yellow),var(--green)); transition:width .8s cubic-bezier(.25,1,.5,1); width:0; }
-  .analysis-section { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
-  .analysis-title { font-size:.7rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:600; margin-bottom:8px; }
-  .analysis-text { font-size:.87rem; color:var(--text); line-height:1.65; white-space:pre-line; }
+  .summary-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .summary-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:5px 11px;font-size:.76rem;color:var(--muted);font-weight:500;}
+  .summary-pill span{color:var(--text);font-weight:700;}
 
-  /* TCGDex confirm banner */
-  .tcgdex-banner { display:flex; align-items:center; gap:12px; background:rgba(61,255,160,.06); border:1px solid rgba(61,255,160,.2); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
-  .tcgdex-img { width:48px; height:68px; object-fit:contain; border-radius:6px; border:1px solid rgba(61,255,160,.2); background:var(--surface); flex-shrink:0; }
-  .tcgdex-img.error { display:none; }
-  .tcgdex-info { min-width:0; }
-  .tcgdex-label { font-size:.68rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--green); font-weight:600; margin-bottom:3px; }
-  .tcgdex-name { font-weight:700; font-size:.95rem; color:var(--text); }
-  .tcgdex-sub { font-size:.78rem; color:var(--muted); margin-top:2px; }
-  .tcgdex-number { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--yellow); letter-spacing:1px; }
+  /* Card result rows */
+  .card-list{display:flex;flex-direction:column;gap:8px;}
+  .card-row{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s;}
+  .card-row.confirmed{border-color:rgba(61,255,160,.25);}
+  .card-row.unconfirmed{border-color:rgba(245,200,66,.2);}
+  .card-row.failed{border-color:rgba(255,74,110,.2);}
 
-  /* Types */
-  .types-row { display:flex; gap:7px; flex-wrap:wrap; }
-  .type-badge { padding:4px 13px; border-radius:99px; font-size:.75rem; font-weight:700; }
-  .type-fire{background:rgba(255,100,60,.2);color:#ff7a50;border:1px solid rgba(255,100,60,.3)}
-  .type-water{background:rgba(74,158,255,.2);color:#4a9eff;border:1px solid rgba(74,158,255,.3)}
-  .type-grass{background:rgba(61,255,160,.15);color:#3dffa0;border:1px solid rgba(61,255,160,.25)}
-  .type-electric{background:rgba(245,200,66,.15);color:#f5c842;border:1px solid rgba(245,200,66,.25)}
-  .type-psychic{background:rgba(255,100,200,.15);color:#ff8ad8;border:1px solid rgba(255,100,200,.25)}
-  .type-dragon{background:rgba(100,80,255,.2);color:#9080ff;border:1px solid rgba(100,80,255,.3)}
-  .type-dark{background:rgba(80,60,100,.3);color:#c09ee0;border:1px solid rgba(80,60,100,.4)}
-  .type-normal{background:rgba(180,180,180,.15);color:#c0c0c0;border:1px solid rgba(180,180,180,.2)}
-  .type-fighting{background:rgba(220,80,50,.2);color:#e06040;border:1px solid rgba(220,80,50,.3)}
-  .type-metal{background:rgba(150,150,200,.2);color:#b0b0e0;border:1px solid rgba(150,150,200,.3)}
-  .type-default{background:rgba(100,100,150,.2);color:#a0a0c0;border:1px solid rgba(100,100,150,.3)}
+  .card-row-header{display:grid;grid-template-columns:26px auto 1fr auto;gap:10px;align-items:center;padding:12px 14px;cursor:pointer;}
+  .card-index{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--muted);text-align:center;}
+  .card-thumb{width:38px;height:53px;object-fit:contain;border-radius:5px;background:var(--surface2);border:1px solid var(--border);flex-shrink:0;}
+  .card-thumb.no-img{display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--muted);}
+  .card-info{min-width:0;}
+  .card-name{font-weight:700;font-size:.94rem;color:var(--text);margin-bottom:2px;}
+  .card-meta{font-size:.76rem;color:var(--muted);}
+  .card-badges{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+  .card-number{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--yellow);letter-spacing:1px;}
+  .status-badge{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.5px;}
+  .status-confirmed{background:rgba(61,255,160,.12);color:var(--green);border:1px solid rgba(61,255,160,.25);}
+  .status-partial{background:rgba(245,200,66,.12);color:var(--yellow);border:1px solid rgba(245,200,66,.25);}
+  .status-failed{background:rgba(255,74,110,.1);color:#ff8a9e;border:1px solid rgba(255,74,110,.2);}
 
-  /* ===== MULTI RESULT ===== */
-  .multi-results { display:none; margin-top:26px; }
-  .multi-results.show { display:block; animation:fadeUp .4s ease both; }
-  .multi-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .multi-title { font-family:'Bebas Neue',sans-serif; font-size:1.45rem; letter-spacing:2px; color:var(--yellow); }
-  .multi-count { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:4px 12px; font-size:.78rem; color:var(--muted); font-weight:600; }
-  .summary-bar { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-  .summary-pill { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:6px 12px; font-size:.77rem; color:var(--muted); font-weight:500; }
-  .summary-pill span { color:var(--text); font-weight:700; }
+  /* Expanded */
+  .card-detail{display:none;padding:0 14px 14px;}
+  .card-detail.show{display:block;animation:fadeUp .2s both;}
+  .detail-divider{height:1px;background:var(--border);margin-bottom:12px;}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  @media(max-width:400px){.detail-grid{grid-template-columns:1fr}}
+  .detail-item{background:var(--surface2);border-radius:8px;padding:8px 10px;border:1px solid var(--border);}
+  .detail-label{font-size:.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;margin-bottom:2px;}
+  .detail-value{font-size:.85rem;font-weight:600;color:var(--text);}
+  .detail-value.yellow{color:var(--yellow);}
+  .detail-value.green{color:var(--green);}
+  .detail-value.blue{color:var(--blue);}
+  .detail-note{font-size:.78rem;color:var(--muted);line-height:1.55;margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
 
-  /* Card rows */
-  .card-list { display:flex; flex-direction:column; gap:8px; }
-  .card-row { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 14px; display:grid; grid-template-columns:26px 1fr auto; gap:10px; align-items:start; cursor:pointer; transition:border-color .15s; }
-  .card-row:hover { border-color:#3a3a5a; }
-  .card-row.expanded { border-color:var(--yellow); }
-  .card-num { font-family:'Bebas Neue',sans-serif; font-size:1rem; color:var(--muted); text-align:center; padding-top:3px; }
-  .card-main { min-width:0; }
-  .card-name-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:3px; }
-  .card-name { font-weight:700; font-size:.95rem; color:var(--text); }
-  .card-lang-badge { font-size:.65rem; background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:2px 6px; color:var(--muted); font-weight:600; }
-  .card-sub { font-size:.78rem; color:var(--muted); }
-  .card-right { text-align:right; flex-shrink:0; }
-  .card-number-big { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--yellow); letter-spacing:1px; }
-  .card-rarity-badge { display:inline-block; font-size:.7rem; font-weight:700; padding:3px 8px; border-radius:6px; margin-bottom:4px; letter-spacing:.5px; }
-  .rarity-sir { background:rgba(245,200,66,.15); color:var(--yellow); border:1px solid rgba(245,200,66,.3); }
-  .rarity-ur  { background:rgba(74,158,255,.15); color:var(--blue);   border:1px solid rgba(74,158,255,.3); }
-  .rarity-ir  { background:rgba(61,255,160,.1);  color:var(--green);  border:1px solid rgba(61,255,160,.2); }
-  .rarity-r   { background:rgba(61,255,160,.1);  color:var(--green);  border:1px solid rgba(61,255,160,.2); }
-  .rarity-c   { background:rgba(100,100,150,.15);color:var(--muted);  border:1px solid var(--border); }
+  /* Versions list */
+  .versions-label{font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:600;margin:10px 0 6px;}
+  .versions-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+  .versions-scroll::-webkit-scrollbar{height:3px;}
+  .versions-scroll::-webkit-scrollbar-track{background:var(--surface);}
+  .versions-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+  .version-item{flex-shrink:0;text-align:center;cursor:pointer;opacity:.6;transition:opacity .15s;}
+  .version-item.selected{opacity:1;}
+  .version-item:hover{opacity:.9;}
+  .version-img{width:52px;height:72px;object-fit:contain;border-radius:6px;border:2px solid transparent;background:var(--surface2);}
+  .version-item.selected .version-img{border-color:var(--yellow);}
+  .version-num{font-size:.65rem;color:var(--muted);margin-top:3px;}
 
-  /* Expanded detail */
-  .card-detail { display:none; grid-column:1/-1; background:var(--surface2); border-radius:10px; padding:14px; margin-top:4px; border:1px solid var(--border); }
-  .card-detail.show { display:block; animation:fadeUp .2s both; }
-  .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
-  @media(max-width:420px){.detail-grid{grid-template-columns:1fr}}
-  .detail-item { background:var(--surface); border-radius:8px; padding:8px 10px; border:1px solid var(--border); }
-  .detail-label { font-size:.63rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:600; margin-bottom:2px; }
-  .detail-value { font-size:.85rem; font-weight:600; color:var(--text); }
-  .detail-number { font-family:'Bebas Neue',sans-serif; font-size:1.6rem; color:var(--yellow); }
-  .detail-analysis { font-size:.82rem; color:#b0b0c8; line-height:1.6; margin-bottom:8px; }
+  .reset-btn{width:100%;margin-top:16px;padding:11px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .18s;}
+  .reset-btn:hover{border-color:var(--blue);color:var(--text);}
 
-  /* TCGDex mini confirm */
-  .tcgdex-mini { display:flex; align-items:center; gap:10px; background:rgba(61,255,160,.05); border:1px solid rgba(61,255,160,.15); border-radius:8px; padding:8px 10px; margin-top:8px; }
-  .tcgdex-mini-img { width:36px; height:50px; object-fit:contain; border-radius:4px; background:var(--surface); flex-shrink:0; }
-  .tcgdex-mini-img.hidden { display:none; }
-  .tcgdex-mini-info { min-width:0; }
-  .tcgdex-mini-label { font-size:.62rem; text-transform:uppercase; letter-spacing:1px; color:var(--green); font-weight:600; margin-bottom:2px; }
-  .tcgdex-mini-num { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--yellow); }
-  .tcgdex-mini-sub { font-size:.74rem; color:var(--muted); }
-
-  /* Reset */
-  .reset-btn { width:100%; margin-top:14px; padding:12px; background:transparent; border:1px solid var(--border); border-radius:12px; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:.83rem; font-weight:500; cursor:pointer; transition:all .18s; }
-  .reset-btn:hover { border-color:var(--blue); color:var(--text); }
-
-  /* Camera modal */
-  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:100; align-items:center; justify-content:center; padding:16px; }
-  .modal-overlay.show { display:flex; }
-  .modal { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:20px; max-width:480px; width:100%; }
-  .modal-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:2px; margin-bottom:14px; }
-  video { width:100%; border-radius:10px; background:#000; margin-bottom:12px; }
-  canvas { display:none; }
-  .modal-actions { display:flex; gap:10px; }
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;max-width:480px;width:100%;}
+  .modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;margin-bottom:14px;}
+  video{width:100%;border-radius:10px;background:#000;margin-bottom:12px;}
+  canvas{display:none;}
+  .modal-actions{display:flex;gap:10px;}
 </style>
 </head>
 <body>
@@ -215,18 +162,13 @@
       </svg>
       <h1>PokéScan</h1>
     </div>
-    <p class="tagline">Identificador de Cartas com IA</p>
+    <p class="tagline">Identificador Visual de Cartas</p>
   </header>
 
-  <div class="mode-toggle">
-    <button class="mode-btn active" id="modeSingle">🃏 Uma carta</button>
-    <button class="mode-btn" id="modeMulti">📦 Várias cartas</button>
-  </div>
-
   <div class="upload-zone" id="uploadZone">
-    <span class="upload-icon" id="uploadIcon">📷</span>
-    <p class="upload-title" id="uploadTitle">Toque para selecionar uma foto</p>
-    <p class="upload-sub" id="uploadSub">JPG, PNG, WEBP • Até 10MB</p>
+    <span class="upload-icon">📦</span>
+    <p class="upload-title">Foto com uma ou várias cartas</p>
+    <p class="upload-sub">A IA identifica visualmente cada carta e confirma o número via TCGDex</p>
   </div>
 
   <div class="action-row">
@@ -236,16 +178,17 @@
   </div>
 
   <div class="preview-wrap" id="previewWrap">
-    <img class="preview-img" id="previewImg" src="" alt="Preview">
+    <img class="preview-img" id="previewImg" src="" alt="">
     <button class="preview-clear" id="clearBtn">✕ Remover</button>
   </div>
 
   <div class="scan-btn-wrap" id="scanBtnWrap">
-    <button class="btn-scan" id="scanBtn">🔍 IDENTIFICAR CARTA</button>
+    <button class="btn-scan" id="scanBtn">🔍 IDENTIFICAR CARTAS</button>
   </div>
 
   <div class="error-box" id="errorBox"></div>
 
+  <!-- Loading with step list -->
   <div class="loading" id="loading">
     <svg class="pokeball-spin" viewBox="0 0 56 56" fill="none">
       <circle cx="28" cy="28" r="27" stroke="#2a2a3d" stroke-width="2"/>
@@ -255,74 +198,22 @@
       <circle cx="28" cy="28" r="4" fill="#f5c842"/>
       <path d="M1 28 A27 27 0 0 1 55 28" stroke="#4a9eff" stroke-width="2" stroke-dasharray="4 4"/>
     </svg>
-    <p class="loading-text">Analisando com IA...</p>
-    <p class="loading-steps" id="loadingStep"></p>
-    <div class="step-indicator" id="stepIndicator"></div>
+    <p class="loading-title">Analisando...</p>
+    <div class="step-list" id="stepList"></div>
   </div>
 
-  <!-- SINGLE RESULT -->
+  <!-- Results -->
   <div class="results" id="results">
-    <div class="result-card">
-      <div class="result-header">
-        <div class="result-badge" id="cardCategory">POKÉMON</div>
-        <div class="result-card-name" id="cardName">—</div>
-      </div>
-      <div class="result-body">
-        <div class="confidence-wrap">
-          <div class="confidence-label"><span>Confiança</span><span id="confidenceVal">—%</span></div>
-          <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill"></div></div>
-        </div>
-
-        <!-- TCGDex confirmation -->
-        <div class="tcgdex-banner" id="tcgdexBanner" style="display:none">
-          <img class="tcgdex-img" id="tcgdexImg" src="" alt="Card art" onerror="this.classList.add('error')">
-          <div class="tcgdex-info">
-            <div class="tcgdex-label">✅ Confirmado via TCGDex</div>
-            <div class="tcgdex-name" id="tcgdexName">—</div>
-            <div class="tcgdex-sub" id="tcgdexSub">—</div>
-            <div class="tcgdex-number" id="tcgdexNumber">—</div>
-          </div>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-item"><div class="info-label">Número da Carta</div><div class="info-value yellow" id="cardNumber">—</div></div>
-          <div class="info-item"><div class="info-label">Set / Coleção</div><div class="info-value blue" id="cardSet">—</div></div>
-          <div class="info-item"><div class="info-label">Raridade</div><div class="info-value" id="cardRarity">—</div></div>
-          <div class="info-item"><div class="info-label">Idioma</div><div class="info-value" id="cardLang">—</div></div>
-          <div class="info-item"><div class="info-label">HP</div><div class="info-value" id="cardHP">—</div></div>
-          <div class="info-item"><div class="info-label">Era</div><div class="info-value" id="cardYear">—</div></div>
-        </div>
-
-        <div class="analysis-section" id="typesSection">
-          <div class="analysis-title">Tipo(s)</div>
-          <div class="types-row" id="cardTypes"></div>
-        </div>
-        <div class="analysis-section">
-          <div class="analysis-title">Ataques / Habilidades</div>
-          <p class="analysis-text" id="cardAttacks">—</p>
-        </div>
-        <div class="analysis-section">
-          <div class="analysis-title">Observações</div>
-          <p class="analysis-text" id="cardAnalysis">—</p>
-        </div>
-        <button class="reset-btn" id="resetBtnSingle">↩ Analisar outra carta</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MULTI RESULT -->
-  <div class="multi-results" id="multiResults">
-    <div class="multi-header">
-      <div class="multi-title">Cartas Identificadas</div>
-      <div class="multi-count" id="multiCount">0 cartas</div>
+    <div class="results-header">
+      <div class="results-title">Cartas Identificadas</div>
+      <div class="results-count" id="resultsCount">0</div>
     </div>
     <div class="summary-bar" id="summaryBar"></div>
     <div class="card-list" id="cardList"></div>
-    <button class="reset-btn" id="resetBtnMulti" style="margin-top:16px">↩ Analisar outra foto</button>
+    <button class="reset-btn" id="resetBtn">↩ Analisar outra foto</button>
   </div>
 </div>
 
-<!-- Camera Modal -->
 <div class="modal-overlay" id="cameraModal">
   <div class="modal">
     <div class="modal-title">📷 Câmera ao Vivo</div>
@@ -336,38 +227,23 @@
 </div>
 
 <script>
-let currentMode = 'single';
+// ─── State ───────────────────────────────────────────────
 let currentImageBase64 = null;
 let stream = null;
 
-const fileGallery  = document.getElementById('fileInputGallery');
-const fileCamera   = document.getElementById('fileInputCamera');
-const uploadZone   = document.getElementById('uploadZone');
-const previewWrap  = document.getElementById('previewWrap');
-const previewImg   = document.getElementById('previewImg');
-const scanBtnWrap  = document.getElementById('scanBtnWrap');
-const scanBtn      = document.getElementById('scanBtn');
-const loadingEl    = document.getElementById('loading');
-const loadingStep  = document.getElementById('loadingStep');
-const errorBox     = document.getElementById('errorBox');
-const resultsEl    = document.getElementById('results');
-const multiEl      = document.getElementById('multiResults');
+// ─── DOM ─────────────────────────────────────────────────
+const fileGallery = document.getElementById('fileInputGallery');
+const fileCamera  = document.getElementById('fileInputCamera');
+const uploadZone  = document.getElementById('uploadZone');
+const previewWrap = document.getElementById('previewWrap');
+const previewImg  = document.getElementById('previewImg');
+const scanBtnWrap = document.getElementById('scanBtnWrap');
+const scanBtn     = document.getElementById('scanBtn');
+const loadingEl   = document.getElementById('loading');
+const errorBox    = document.getElementById('errorBox');
+const resultsEl   = document.getElementById('results');
 
-// ---- Mode ----
-document.getElementById('modeSingle').addEventListener('click', () => setMode('single'));
-document.getElementById('modeMulti').addEventListener('click',  () => setMode('multi'));
-function setMode(m) {
-  currentMode = m;
-  document.getElementById('modeSingle').classList.toggle('active', m==='single');
-  document.getElementById('modeMulti').classList.toggle('active',  m==='multi');
-  document.getElementById('uploadIcon').textContent  = m==='multi' ? '📦' : '📷';
-  document.getElementById('uploadTitle').textContent = m==='multi' ? 'Foto com várias cartas' : 'Toque para selecionar uma foto';
-  document.getElementById('uploadSub').textContent   = m==='multi' ? 'IA identifica TODAS as cartas visíveis' : 'JPG, PNG, WEBP • Até 10MB';
-  scanBtn.textContent = m==='multi' ? '🔍 IDENTIFICAR TODAS AS CARTAS' : '🔍 IDENTIFICAR CARTA';
-  resetAll();
-}
-
-// ---- File inputs ----
+// ─── File input (mobile-safe) ─────────────────────────────
 document.getElementById('btnGallery').addEventListener('click', () => { fileGallery.value=''; fileGallery.click(); });
 document.getElementById('btnCamera').addEventListener('click',  () => { fileCamera.value='';  fileCamera.click(); });
 uploadZone.addEventListener('click', () => { fileGallery.value=''; fileGallery.click(); });
@@ -382,32 +258,38 @@ uploadZone.addEventListener('drop', e => {
 });
 
 function loadImage(file) {
-  const reader = new FileReader();
-  reader.onload = ev => {
-    currentImageBase64 = ev.target.result.split(',')[1];
-    previewImg.src = ev.target.result;
+  // Compress if > 3MB
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const maxW = 1600;
+    let w = img.width, h = img.height;
+    if(w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+    const cv = document.createElement('canvas');
+    cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    currentImageBase64 = cv.toDataURL('image/jpeg',.85).split(',')[1];
+    previewImg.src = cv.toDataURL('image/jpeg',.85);
     previewWrap.classList.add('show');
     scanBtnWrap.classList.add('show');
     resultsEl.classList.remove('show');
-    multiEl.classList.remove('show');
     errorBox.classList.remove('show');
+    URL.revokeObjectURL(url);
   };
-  reader.readAsDataURL(file);
+  img.src = url;
 }
 
 document.getElementById('clearBtn').addEventListener('click', resetAll);
-document.getElementById('resetBtnSingle').addEventListener('click', () => { resetAll(); window.scrollTo({top:0,behavior:'smooth'}); });
-document.getElementById('resetBtnMulti').addEventListener('click',  () => { resetAll(); window.scrollTo({top:0,behavior:'smooth'}); });
+document.getElementById('resetBtn').addEventListener('click', () => { resetAll(); window.scrollTo({top:0,behavior:'smooth'}); });
 function resetAll() {
   previewWrap.classList.remove('show');
   scanBtnWrap.classList.remove('show');
   resultsEl.classList.remove('show');
-  multiEl.classList.remove('show');
   errorBox.classList.remove('show');
   currentImageBase64 = null;
 }
 
-// ---- Live camera ----
+// ─── Live camera ──────────────────────────────────────────
 document.getElementById('btnLive').addEventListener('click', async () => {
   try {
     stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
@@ -420,11 +302,11 @@ document.getElementById('captureBtn').addEventListener('click', () => {
   const v=document.getElementById('video'), c=document.getElementById('canvas');
   c.width=v.videoWidth; c.height=v.videoHeight;
   c.getContext('2d').drawImage(v,0,0);
-  const url=c.toDataURL('image/jpeg',.92);
+  const url=c.toDataURL('image/jpeg',.85);
   currentImageBase64=url.split(',')[1];
   previewImg.src=url;
   previewWrap.classList.add('show'); scanBtnWrap.classList.add('show');
-  resultsEl.classList.remove('show'); multiEl.classList.remove('show'); errorBox.classList.remove('show');
+  resultsEl.classList.remove('show'); errorBox.classList.remove('show');
   stopCamera();
 });
 function stopCamera() {
@@ -432,225 +314,244 @@ function stopCamera() {
   document.getElementById('cameraModal').classList.remove('show');
 }
 
-// ---- Loading ----
-function setSteps(steps) {
-  const ind = document.getElementById('stepIndicator');
-  ind.innerHTML = steps.map((_,i) => `<div class="step-dot" id="sdot-${i}"></div>`).join('');
+// ─── Step UI ──────────────────────────────────────────────
+let steps = [];
+function initSteps(list) {
+  steps = list;
+  const el = document.getElementById('stepList');
+  el.innerHTML = list.map((s,i) => `
+    <div class="step-item" id="step-${i}">
+      <div class="step-icon" id="step-icon-${i}">⏳</div>
+      <div class="step-text">
+        <div id="step-label-${i}">${s}</div>
+        <div class="step-sub" id="step-sub-${i}"></div>
+      </div>
+    </div>`).join('');
 }
-function setStep(i, steps) {
-  loadingStep.textContent = steps[i] || '';
-  steps.forEach((_,j) => {
-    const d = document.getElementById(`sdot-${j}`);
-    if(!d) return;
-    d.className = 'step-dot' + (j < i ? ' done' : j===i ? ' active' : '');
-  });
+function setStep(i, state, sub='') {
+  const el = document.getElementById(`step-${i}`);
+  const icon = document.getElementById(`step-icon-${i}`);
+  const subEl = document.getElementById(`step-sub-${i}`);
+  if(!el) return;
+  el.className = 'step-item ' + state;
+  icon.textContent = state==='done' ? '✅' : state==='active' ? '🔄' : state==='error' ? '❌' : '⏳';
+  if(sub) subEl.textContent = sub;
 }
 
-// ---- Scan ----
-scanBtn.addEventListener('click', () => {
-  if(!currentImageBase64) return;
-  currentMode==='single' ? analyzeSingle() : analyzeMulti();
-});
+// ─── Main flow ────────────────────────────────────────────
+scanBtn.addEventListener('click', () => { if(currentImageBase64) runAnalysis(); });
 
-// ========== SINGLE ==========
-async function analyzeSingle() {
-  const steps = ['Analisando imagem...','Identificando carta...','Lendo numeração...','Buscando no TCGDex...'];
-  setSteps(steps);
-  scanBtn.disabled=true;
+async function runAnalysis() {
+  scanBtn.disabled = true;
   loadingEl.classList.add('show');
   resultsEl.classList.remove('show');
   errorBox.classList.remove('show');
-  setStep(0, steps);
 
-  const prompt = `Você é um especialista em Pokémon TCG. Analise esta carta com MÁXIMA atenção.
-
-PRIORIDADE 1 — NUMERAÇÃO: Leia o número impresso no CANTO INFERIOR da carta (ex: 125/197, 245/╠╣, SVP 001, etc). Este número está SEMPRE presente em algum canto da carta. Examine com cuidado.
-
-PRIORIDADE 2 — IDENTIFICAÇÃO: Use nome, HP, ataques, habilidades, tipo e arte para identificar a carta exata.
-
-PRIORIDADE 3 — CARTAS DIFÍCEIS:
-- Cartas gold/douradas: foque no nome e HP no topo
-- Cartas holográficas com reflexo: foque nas bordas e texto
-- Cartas japonesas: leia o katakana/hiragana do nome
-
-Responda SOMENTE em JSON válido, sem markdown:
-{
-  "found": true,
-  "confidence": 92,
-  "category": "Pokémon",
-  "name": "Charizard ex",
-  "name_jp": "リザードンex",
-  "set_name": "Obsidian Flames",
-  "set_code": "OBF",
-  "card_number_visible": "125/197",
-  "card_number_total": "197",
-  "local_id": "125",
-  "hp": "330",
-  "types": ["Fogo"],
-  "attacks": ["Reino Infernal — 180", "Escuridão Ardente — 330"],
-  "ability": "Escuridão Ardente",
-  "rarity": "Special Illustration Rare",
-  "rarity_tier": "SIR",
-  "language": "PT-BR",
-  "era": "Scarlet & Violet",
-  "year": "2023",
-  "is_holo": true,
-  "is_full_art": true,
-  "number_reading_notes": "Número lido no canto inferior direito: 125/197",
-  "analysis": "Charizard ex SIR da coleção Obsidian Flames. Arte full art com design flamejante.",
-  "tcgdex_query": "charizard-ex"
-}
-
-Se NÃO for carta: { "found": false, "reason": "..." }
-Responda SOMENTE o JSON.`;
+  initSteps([
+    'Detectando cartas na foto...',
+    'Buscando versões no TCGDex...',
+    'Comparação visual (IA)...',
+    'Montando resultados...'
+  ]);
 
   try {
-    setStep(1, steps);
-    const r = await callAPI(prompt, 1500);
-    setStep(2, steps);
+    // ── STEP 1: Claude extracts card names + basic info ──
+    setStep(0, 'active');
+    const names = await extractCardNames();
+    setStep(0, 'done', `${names.length} carta(s) detectada(s)`);
 
-    if(!r.found) { stopLoadingSingle(); showError('❌ ' + (r.reason||'Não identificado.')); return; }
+    if(!names.length) throw new Error('Nenhuma carta detectada na imagem.');
 
-    // TCGDex lookup
-    setStep(3, steps);
-    let tcgData = null;
-    try { tcgData = await lookupTCGDex(r); } catch(e) { console.warn('TCGDex fallback:', e); }
+    // ── STEP 2: TCGDex fetch all versions for each card ──
+    setStep(1, 'active');
+    const tcgVersionsArr = await fetchAllVersions(names);
+    const found = tcgVersionsArr.filter(v => v.versions.length > 0).length;
+    setStep(1, 'done', `${found}/${names.length} encontradas no TCGDex`);
 
-    stopLoadingSingle();
-    renderSingle(r, tcgData);
-  } catch(e) { stopLoadingSingle(); showError('Erro: ' + e.message); }
+    // ── STEP 3: Claude visual match ──
+    setStep(2, 'active');
+    const matched = await visualMatch(names, tcgVersionsArr);
+    setStep(2, 'done', 'Comparação concluída');
+
+    // ── STEP 4: Render ──
+    setStep(3, 'active');
+    loadingEl.classList.remove('show');
+    renderResults(matched, tcgVersionsArr);
+    setStep(3, 'done');
+
+  } catch(e) {
+    loadingEl.classList.remove('show');
+    showError('Erro: ' + e.message);
+  }
+
+  scanBtn.disabled = false;
 }
 
-function stopLoadingSingle() { loadingEl.classList.remove('show'); scanBtn.disabled=false; }
+// ── STEP 1: Extract names ─────────────────────────────────
+async function extractCardNames() {
+  const prompt = `Você é especialista em Pokémon TCG. Analise esta foto.
 
-// ========== MULTI ==========
-async function analyzeMulti() {
-  const steps = ['Mapeando cartas...','Identificando nomes e sets...','Lendo numerações...','Confirmando via TCGDex...','Finalizando...'];
-  setSteps(steps);
-  scanBtn.disabled=true;
-  loadingEl.classList.add('show');
-  multiEl.classList.remove('show');
-  errorBox.classList.remove('show');
-  setStep(0, steps);
+Liste TODAS as cartas Pokémon visíveis. Para cada uma extraia apenas:
+- name: nome da carta (em português se PT-BR, translitere se japonesa)
+- hp: HP visível no topo
+- language: PT-BR, EN, JP ou KR
+- position: ex "Linha 1, coluna 2"
+- types: tipos visíveis (Fogo, Água, etc)
+- is_trainer: true se for carta de Treinador/Suporte/Estádio
 
-  const prompt = `Você é um especialista em Pokémon TCG. Esta foto contém VÁRIAS cartas.
-
-Para CADA carta visível, execute:
-1. Leia o NÚMERO no canto inferior (ex: 125/197). É pequeno mas está sempre lá.
-2. Identifique nome, set, HP, ataques.
-3. Para cartas gold/douradas ou holográficas: use nome e HP como identificadores principais.
-4. Para cartas japonesas: translitere o nome.
-
-Responda SOMENTE em JSON válido, sem markdown:
+Responda SOMENTE JSON válido:
 {
-  "total": 3,
   "cards": [
-    {
-      "position": "Linha 1, coluna 1",
-      "name": "Charizard ex",
-      "set_name": "Obsidian Flames",
-      "set_code": "OBF",
-      "card_number_visible": "125/197",
-      "local_id": "125",
-      "card_number_total": "197",
-      "hp": "330",
-      "types": ["Fogo"],
-      "attacks": ["Reino Infernal 180", "Escuridão Ardente 330"],
-      "rarity": "Special Illustration Rare",
-      "rarity_tier": "SIR",
-      "language": "PT-BR",
-      "era": "Scarlet & Violet",
-      "is_holo": true,
-      "number_reading_notes": "Número visível: 125/197 canto inferior direito",
-      "analysis": "SIR full art com arte flamejante.",
-      "tcgdex_query": "charizard-ex"
-    }
-  ],
-  "collection_notes": "Coleção diversa com cartas PT-BR e JP."
+    {"name":"Charizard ex","hp":"330","language":"PT-BR","position":"Linha 1, col 1","types":["Fogo"],"is_trainer":false},
+    {"name":"Favor da Misty","hp":null,"language":"PT-BR","position":"Linha 2, col 3","types":[],"is_trainer":true}
+  ]
 }
-
-rarity_tier: "SIR", "UR", "IR", "R", "C"
-Identifique TODAS as cartas, mesmo parcialmente visíveis.
 Responda SOMENTE o JSON.`;
 
-  try {
-    setStep(1, steps);
-    const r = await callAPI(prompt, 5000);
-    setStep(2, steps);
-
-    if(!r.cards?.length) { stopLoadingMulti(); showError('❌ Nenhuma carta identificada.'); return; }
-
-    // TCGDex for each card
-    setStep(3, steps);
-    const tcgResults = await Promise.allSettled(r.cards.map(c => lookupTCGDex(c)));
-    const tcgData = tcgResults.map(res => res.status==='fulfilled' ? res.value : null);
-
-    setStep(4, steps);
-    stopLoadingMulti();
-    renderMulti(r, tcgData);
-  } catch(e) { stopLoadingMulti(); showError('Erro: ' + e.message); }
+  const r = await callAPI(prompt, 2000);
+  return r.cards || [];
 }
 
-function stopLoadingMulti() { loadingEl.classList.remove('show'); scanBtn.disabled=false; }
+// ── STEP 2: TCGDex - fetch all versions ───────────────────
+async function fetchAllVersions(cards) {
+  const results = await Promise.all(cards.map(async card => {
+    const versions = await fetchVersionsForCard(card.name, card.is_trainer);
+    return { card, versions };
+  }));
+  return results;
+}
 
-// ========== TCGDex Lookup ==========
-async function lookupTCGDex(card) {
-  const setCode = (card.set_code||'').toLowerCase();
-  const localId = (card.local_id||'').toString();
+async function fetchVersionsForCard(name, isTrainer) {
+  // Normalize name for search
+  const searchName = normalizeName(name);
+  const allVersions = [];
 
-  // 1. Try exact: setCode-localId
-  if(setCode && localId) {
-    try {
-      const res = await fetch(`https://api.tcgdex.net/v2/en/cards/${setCode}-${localId}`);
-      if(res.ok) { const d=await res.json(); if(d.id) return d; }
-    } catch {}
-  }
-
-  // 2. Try set endpoint to find the card by localId
-  if(setCode && localId) {
-    try {
-      const res = await fetch(`https://api.tcgdex.net/v2/en/sets/${setCode}`);
-      if(res.ok) {
-        const set = await res.json();
-        const match = (set.cards||[]).find(c =>
-          String(c.localId) === localId ||
-          String(c.localId).padStart(3,'0') === localId.padStart(3,'0')
+  // Try TCGDex search
+  try {
+    const res = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(searchName)}`);
+    if(res.ok) {
+      const arr = await res.json();
+      if(Array.isArray(arr)) {
+        // Fetch details for up to 8 versions (enough to compare)
+        const toFetch = arr.slice(0, 8);
+        const details = await Promise.allSettled(
+          toFetch.map(c => fetch(`https://api.tcgdex.net/v2/en/cards/${c.id}`).then(r => r.ok ? r.json() : null))
         );
-        if(match) {
-          const detail = await fetch(`https://api.tcgdex.net/v2/en/cards/${match.id}`);
-          if(detail.ok) return await detail.json();
-        }
+        details.forEach(d => {
+          if(d.status==='fulfilled' && d.value?.id) allVersions.push(d.value);
+        });
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
-  // 3. Fallback: search by name
-  if(card.name) {
+  // If no results, try first word only
+  if(!allVersions.length) {
     try {
-      const query = encodeURIComponent(card.name.split(' ')[0]);
-      const url = setCode
-        ? `https://api.tcgdex.net/v2/en/cards?name=${query}&set.id=${setCode}`
-        : `https://api.tcgdex.net/v2/en/cards?name=${query}`;
-      const res = await fetch(url);
+      const firstWord = searchName.split(' ')[0];
+      const res = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(firstWord)}`);
       if(res.ok) {
         const arr = await res.json();
-        if(Array.isArray(arr) && arr.length > 0) {
-          const detail = await fetch(`https://api.tcgdex.net/v2/en/cards/${arr[0].id}`);
-          if(detail.ok) return await detail.json();
+        if(Array.isArray(arr)) {
+          const toFetch = arr.slice(0,6);
+          const details = await Promise.allSettled(
+            toFetch.map(c => fetch(`https://api.tcgdex.net/v2/en/cards/${c.id}`).then(r => r.ok ? r.json() : null))
+          );
+          details.forEach(d => {
+            if(d.status==='fulfilled' && d.value?.id) allVersions.push(d.value);
+          });
         }
       }
     } catch {}
   }
 
-  return null;
+  return allVersions;
 }
 
-// ========== API call ==========
+function normalizeName(name) {
+  // Common PT-BR → EN translations for search
+  const map = {
+    'Charizard ex': 'Charizard ex',
+    'Pikachu ex': 'Pikachu ex',
+    'Mewtwo ex': 'Mewtwo ex',
+    'Greninja ex': 'Greninja ex',
+    'Zekrom ex': 'Zekrom ex',
+    'Favor da Misty': "Misty's Favor",
+    'Pokéboneco da Lilian': "Lillie's Poké Doll",
+    'Mega Latias ex': 'Mega Latias EX',
+    'Mega Kyogre ex': 'Mega Kyogre EX',
+    'Mega Gardevoir ex': 'Mega Gardevoir EX',
+    'Mega Dragonite ex': 'Mega Dragonite EX',
+    'Mega Lopunny ex': 'Mega Lopunny EX',
+  };
+  return map[name] || name;
+}
+
+// ── STEP 3: Visual matching ───────────────────────────────
+async function visualMatch(cards, tcgVersionsArr) {
+  // Build a list with versions info to send to Claude
+  const cardSummaries = tcgVersionsArr.map((item, i) => {
+    const versions = item.versions.map(v => ({
+      id: v.id,
+      localId: v.localId,
+      set: v.set?.name,
+      setId: v.set?.id,
+      total: v.set?.cardCount?.total,
+      rarity: v.rarity,
+      image: v.image ? v.image + '/low.webp' : null,
+    }));
+    return {
+      index: i,
+      name: item.card.name,
+      position: item.card.position,
+      language: item.card.language,
+      hp: item.card.hp,
+      types: item.card.types,
+      is_trainer: item.card.is_trainer,
+      versions_count: versions.length,
+      versions: versions,
+    };
+  });
+
+  const prompt = `Você é especialista em Pokémon TCG. Tenho uma foto com várias cartas.
+
+Para cada carta listada abaixo, escolha qual versão do TCGDex corresponde VISUALMENTE à carta na foto.
+Compare: arte, borda, moldura, cores, estilo holográfico, idioma.
+
+Dados das cartas encontradas no TCGDex:
+${JSON.stringify(cardSummaries, null, 1)}
+
+Retorne SOMENTE JSON válido:
+{
+  "matches": [
+    {
+      "index": 0,
+      "name": "Charizard ex",
+      "matched_id": "obf-125",
+      "matched_set": "Obsidian Flames",
+      "matched_set_id": "obf",
+      "matched_local_id": "125",
+      "matched_total": "197",
+      "matched_rarity": "Special Illustration Rare",
+      "confidence": "high",
+      "reason": "Arte full art flamejante, borda dourada, corresponde exatamente ao OBF-125"
+    }
+  ]
+}
+
+confidence: "high" (certeza), "medium" (provável), "low" (melhor opção disponível)
+Se não houver versão compatível, use matched_id: null.
+Responda SOMENTE o JSON.`;
+
+  const r = await callAPI(prompt, 3000);
+  return r.matches || [];
+}
+
+// ── API call ──────────────────────────────────────────────
 async function callAPI(prompt, maxTokens) {
   const res = await fetch('/api/analyze', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
+    body:JSON.stringify({
       model:'claude-sonnet-4-20250514',
       max_tokens: maxTokens,
       messages:[{role:'user',content:[
@@ -662,155 +563,155 @@ async function callAPI(prompt, maxTokens) {
   if(!res.ok) throw new Error(`API ${res.status}`);
   const d = await res.json();
   if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
-  const raw = d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
-  return JSON.parse(raw);
+  const raw = d.content.map(b=>b.text||'').join('').replace(/```json[\s\S]*?```|```/g,'').trim();
+  // Find JSON object in response
+  const match = raw.match(/\{[\s\S]*\}/);
+  if(!match) throw new Error('Resposta inválida da IA');
+  return JSON.parse(match[0]);
 }
 
-// ========== Render Single ==========
-function renderSingle(r, tcg) {
-  document.getElementById('cardCategory').textContent = r.category||'CARTA';
-  document.getElementById('cardName').textContent = r.name||'—';
+// ── Render ────────────────────────────────────────────────
+function renderResults(matches, tcgVersionsArr) {
+  const total = tcgVersionsArr.length;
+  const confirmed = matches.filter(m => m.matched_id && m.confidence !== 'low').length;
 
-  // Number — show what was visually read
-  const numStr = r.card_number_visible || (r.local_id && r.card_number_total ? `${r.local_id}/${r.card_number_total}` : r.local_id || '—');
-  document.getElementById('cardNumber').textContent = numStr;
-  document.getElementById('cardSet').textContent = [r.set_name, r.set_code].filter(Boolean).join(' · ')||'—';
-  document.getElementById('cardRarity').textContent = r.rarity||'—';
-  document.getElementById('cardLang').textContent = r.language||'—';
-  document.getElementById('cardHP').textContent = r.hp ? r.hp+' HP' : '—';
-  document.getElementById('cardYear').textContent = [r.era, r.year].filter(Boolean).join(' · ')||'—';
+  document.getElementById('resultsCount').textContent = `${total} carta${total!==1?'s':''}`;
 
-  const conf = Math.min(100,Math.max(0,r.confidence||0));
-  document.getElementById('confidenceVal').textContent = conf+'%';
-  setTimeout(()=>{ document.getElementById('confidenceFill').style.width=conf+'%'; },100);
+  // Summary bar
+  const sb = document.getElementById('summaryBar');
+  sb.innerHTML = '';
+  const addPill = (label, val) => {
+    const p = document.createElement('div');
+    p.className='summary-pill';
+    p.innerHTML=`${label}: <span>${val}</span>`;
+    sb.appendChild(p);
+  };
+  addPill('Total', total);
+  addPill('✅ Confirmadas', confirmed);
+  if(total - confirmed > 0) addPill('⚠️ Incertas', total - confirmed);
 
-  // TCGDex banner
-  const banner = document.getElementById('tcgdexBanner');
-  if(tcg && tcg.id) {
-    const imgUrl = tcg.image ? tcg.image+'/high.webp' : '';
-    const tcgNum = tcg.localId && tcg.set?.cardCount?.total ? `${tcg.localId}/${tcg.set.cardCount.total}` : tcg.localId||numStr;
-    document.getElementById('tcgdexImg').src = imgUrl;
-    document.getElementById('tcgdexName').textContent = tcg.name||r.name;
-    document.getElementById('tcgdexSub').textContent = [tcg.set?.name, tcg.set?.id?.toUpperCase()].filter(Boolean).join(' · ');
-    document.getElementById('tcgdexNumber').textContent = tcgNum;
-    banner.style.display='flex';
-    // Override number with confirmed TCGDex number
-    document.getElementById('cardNumber').textContent = tcgNum;
-  } else { banner.style.display='none'; }
+  // Card list
+  const cl = document.getElementById('cardList');
+  cl.innerHTML = '';
 
-  // Types
-  const td = document.getElementById('cardTypes'); td.innerHTML='';
-  const tm = {fogo:'fire',agua:'water',planta:'grass',eletrico:'electric',psiquico:'psychic',dragao:'dragon',sombrio:'dark',normal:'normal',lutador:'fighting',metal:'metal',fire:'fire',water:'water',grass:'grass',electric:'electric',psychic:'psychic',dragon:'dragon',dark:'dark',fighting:'fighting',metal:'metal'};
-  (r.types||[]).forEach(t=>{
-    const k=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const s=document.createElement('span');
-    s.className=`type-badge type-${tm[k]||'default'}`; s.textContent=t; td.appendChild(s);
-  });
-  if(!(r.types||[]).length) document.getElementById('typesSection').style.display='none';
+  tcgVersionsArr.forEach((item, i) => {
+    const match = matches.find(m => m.index === i) || {};
+    const versions = item.versions || [];
+    const card = item.card;
 
-  document.getElementById('cardAttacks').textContent = (r.attacks||[]).join('\n')||(r.ability?`Habilidade: ${r.ability}`:'—');
-  document.getElementById('cardAnalysis').textContent = [r.analysis, r.number_reading_notes].filter(Boolean).join('\n\n')||'—';
+    // Find matched version object
+    const matchedVersion = versions.find(v => v.id === match.matched_id);
+    const displayNum = matchedVersion
+      ? (matchedVersion.localId && matchedVersion.set?.cardCount?.total
+          ? `${matchedVersion.localId}/${matchedVersion.set.cardCount.total}`
+          : matchedVersion.localId || '?')
+      : '?';
 
-  resultsEl.classList.add('show');
-  setTimeout(()=>resultsEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
-}
+    const imgUrl = matchedVersion?.image ? matchedVersion.image + '/low.webp' : null;
+    const setName = match.matched_set || matchedVersion?.set?.name || '—';
+    const setId = (match.matched_set_id || matchedVersion?.set?.id || '').toUpperCase();
+    const rarity = match.matched_rarity || matchedVersion?.rarity || '—';
 
-// ========== Render Multi ==========
-function renderMulti(data, tcgArr) {
-  const cards = data.cards||[];
-  document.getElementById('multiCount').textContent = cards.length+' carta'+(cards.length!==1?'s':'');
+    const statusClass = match.matched_id
+      ? (match.confidence==='high' ? 'confirmed' : 'unconfirmed')
+      : 'failed';
+    const statusBadge = match.matched_id
+      ? (match.confidence==='high'
+          ? '<span class="status-badge status-confirmed">✅ Confirmada</span>'
+          : '<span class="status-badge status-partial">⚠️ Incerta</span>')
+      : '<span class="status-badge status-failed">❌ Não encontrada</span>';
 
-  // Summary
-  const counts={SIR:0,UR:0,IR:0,R:0,C:0};
-  const langs={};
-  cards.forEach(c=>{
-    const tier=c.rarity_tier||'C';
-    counts[tier]=(counts[tier]||0)+1;
-    if(c.language) langs[c.language]=(langs[c.language]||0)+1;
-  });
-  const sb=document.getElementById('summaryBar'); sb.innerHTML='';
-  const rl={SIR:'SIR',UR:'Ultra Rare',IR:'Illus. Rare',R:'Rara',C:'Comum'};
-  Object.entries(counts).forEach(([k,v])=>{ if(!v)return; const p=document.createElement('div'); p.className='summary-pill'; p.innerHTML=`${rl[k]||k}: <span>${v}</span>`; sb.appendChild(p); });
-  Object.entries(langs).forEach(([l,v])=>{ const p=document.createElement('div'); p.className='summary-pill'; p.innerHTML=`${l}: <span>${v}</span>`; sb.appendChild(p); });
-
-  // Cards
-  const cl=document.getElementById('cardList'); cl.innerHTML='';
-  cards.forEach((c,i)=>{
-    const tcg=tcgArr?.[i]||null;
-    const tc={SIR:'rarity-sir',UR:'rarity-ur',IR:'rarity-ir',R:'rarity-r',C:'rarity-c'}[c.rarity_tier||'C']||'rarity-c';
-
-    // Number: prefer TCGDex confirmed, else what AI read, else local_id
-    const aiNum = c.card_number_visible || (c.local_id&&c.card_number_total?`${c.local_id}/${c.card_number_total}`:c.local_id||'?');
-    const tcgNum = tcg?.localId && tcg?.set?.cardCount?.total ? `${tcg.localId}/${tcg.set.cardCount.total}` : tcg?.localId||null;
-    const displayNum = tcgNum || aiNum;
-    const confirmed = !!tcgNum;
-
-    const row=document.createElement('div');
-    row.className='card-row';
-    row.innerHTML=`
-      <div class="card-num">${i+1}</div>
-      <div class="card-main">
-        <div class="card-name-row">
-          <span class="card-name">${c.name||'—'}</span>
-          <span class="card-lang-badge">${c.language||'?'}</span>
-          ${c.is_holo?'<span class="card-lang-badge" style="color:#f5c842;border-color:rgba(245,200,66,.3)">✨</span>':''}
-          ${confirmed?'<span class="card-lang-badge" style="color:#3dffa0;border-color:rgba(61,255,160,.3)">✅</span>':''}
+    const row = document.createElement('div');
+    row.className = `card-row ${statusClass}`;
+    row.innerHTML = `
+      <div class="card-row-header" onclick="toggleDetail(${i})">
+        <div class="card-index">${i+1}</div>
+        ${imgUrl
+          ? `<img class="card-thumb" src="${imgUrl}" onerror="this.outerHTML='<div class=\\'card-thumb no-img\\'>🃏</div>'" alt="">`
+          : `<div class="card-thumb no-img">🃏</div>`}
+        <div class="card-info">
+          <div class="card-name">${card.name}</div>
+          <div class="card-meta">${setName}${setId ? ' · '+setId : ''} · ${card.language||'?'}</div>
         </div>
-        <div class="card-sub">${[c.set_name,c.set_code].filter(Boolean).join(' · ')||'—'}</div>
+        <div class="card-badges">
+          <div class="card-number">${displayNum}</div>
+          ${statusBadge}
+        </div>
       </div>
-      <div class="card-right">
-        <div class="card-rarity-badge ${tc}">${c.rarity_tier||'?'}</div>
-        <div class="card-number-big">${displayNum}</div>
-      </div>
-      <div class="card-detail" id="det-${i}">
+      <div class="card-detail" id="detail-${i}">
+        <div class="detail-divider"></div>
         <div class="detail-grid">
           <div class="detail-item">
-            <div class="detail-label">Número ${confirmed?'✅ TCGDex':'(lido na foto)'}</div>
-            <div class="detail-number">${displayNum}</div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">HP</div>
-            <div class="detail-value">${c.hp?c.hp+' HP':'—'}</div>
+            <div class="detail-label">Número Confirmado</div>
+            <div class="detail-value yellow" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem">${displayNum}</div>
           </div>
           <div class="detail-item">
             <div class="detail-label">Set</div>
-            <div class="detail-value">${[c.set_name,c.set_code].filter(Boolean).join(' · ')||'—'}</div>
+            <div class="detail-value blue">${setName}</div>
           </div>
           <div class="detail-item">
             <div class="detail-label">Raridade</div>
-            <div class="detail-value">${c.rarity||c.rarity_tier||'—'}</div>
+            <div class="detail-value">${rarity}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">HP</div>
+            <div class="detail-value">${card.hp ? card.hp+' HP' : '—'}</div>
           </div>
         </div>
-        ${c.attacks?.length?`<div class="detail-analysis">⚔️ ${c.attacks.join(' · ')}</div>`:''}
-        ${c.analysis?`<div class="detail-analysis">${c.analysis}</div>`:''}
-        ${c.number_reading_notes?`<div class="detail-analysis" style="color:var(--muted);font-size:.76rem">🔍 ${c.number_reading_notes}</div>`:''}
-        ${tcg?.image?`
-        <div class="tcgdex-mini">
-          <img class="tcgdex-mini-img" src="${tcg.image}/low.webp" onerror="this.classList.add('hidden')" alt="">
-          <div class="tcgdex-mini-info">
-            <div class="tcgdex-mini-label">✅ Confirmado TCGDex</div>
-            <div class="tcgdex-mini-num">${displayNum}</div>
-            <div class="tcgdex-mini-sub">${tcg.set?.name||''}</div>
-          </div>
-        </div>`:''}
+        ${match.reason ? `<div class="detail-note">🔍 ${match.reason}</div>` : ''}
+        ${versions.length > 1 ? `
+          <div class="versions-label">Todas as versões encontradas (toque para selecionar)</div>
+          <div class="versions-scroll" id="versions-${i}">
+            ${versions.map(v => {
+              const vNum = v.localId && v.set?.cardCount?.total ? `${v.localId}/${v.set.cardCount.total}` : v.localId||'?';
+              const isSelected = v.id === match.matched_id;
+              return `<div class="version-item ${isSelected?'selected':''}" onclick="selectVersion(${i},'${v.id}',event)" title="${v.set?.name||''} · ${vNum}">
+                <img class="version-img" src="${v.image?v.image+'/low.webp':''}" onerror="this.style.opacity='.3'" alt="">
+                <div class="version-num">${vNum}</div>
+              </div>`;
+            }).join('')}
+          </div>` : ''}
       </div>`;
-    row.addEventListener('click',()=>{
-      const d=document.getElementById(`det-${i}`);
-      const open=d.classList.toggle('show');
-      row.classList.toggle('expanded',open);
-    });
     cl.appendChild(row);
   });
 
-  if(data.collection_notes){
-    const n=document.createElement('div');
-    n.className='analysis-section'; n.style.marginTop='14px';
-    n.innerHTML=`<div class="analysis-title">📝 Notas</div><p class="analysis-text">${data.collection_notes}</p>`;
-    cl.after(n);
-  }
+  // Store versions data for selectVersion
+  window._tcgVersionsArr = tcgVersionsArr;
+  window._matchesArr = matches;
 
-  multiEl.classList.add('show');
-  setTimeout(()=>multiEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
+  resultsEl.classList.add('show');
+  setTimeout(() => resultsEl.scrollIntoView({behavior:'smooth',block:'start'}), 100);
+}
+
+function toggleDetail(i) {
+  const d = document.getElementById(`detail-${i}`);
+  d.classList.toggle('show');
+}
+
+function selectVersion(cardIdx, versionId, e) {
+  e.stopPropagation();
+  const item = window._tcgVersionsArr?.[cardIdx];
+  if(!item) return;
+  const v = item.versions.find(v => v.id === versionId);
+  if(!v) return;
+
+  // Update visual selection
+  document.querySelectorAll(`#versions-${cardIdx} .version-item`).forEach(el => el.classList.remove('selected'));
+  e.currentTarget.classList.add('selected');
+
+  // Update displayed number and set
+  const displayNum = v.localId && v.set?.cardCount?.total ? `${v.localId}/${v.set.cardCount.total}` : v.localId||'?';
+  const row = document.querySelectorAll('.card-row')[cardIdx];
+  if(row) {
+    row.querySelector('.card-number').textContent = displayNum;
+    row.querySelector('.card-meta').textContent = `${v.set?.name||'—'} · ${(v.set?.id||'').toUpperCase()} · ${item.card.language||'?'}`;
+    // Update thumb
+    const thumb = row.querySelector('.card-thumb');
+    if(thumb && v.image) thumb.src = v.image+'/low.webp';
+    // Update detail grid
+    const detailNum = row.querySelector('.detail-value.yellow');
+    if(detailNum) detailNum.textContent = displayNum;
+  }
 }
 
 function showError(msg) { errorBox.textContent=msg; errorBox.classList.add('show'); }
