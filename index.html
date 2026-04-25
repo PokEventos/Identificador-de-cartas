@@ -595,33 +595,53 @@ function stopLoadingMulti() { loadingEl.classList.remove('show'); scanBtn.disabl
 
 // ========== TCGDex Lookup ==========
 async function lookupTCGDex(card) {
-  // Try by set code + local_id first (most precise)
-  if(card.set_code && card.local_id) {
+  const setCode = (card.set_code||'').toLowerCase();
+  const localId = (card.local_id||'').toString();
+
+  // 1. Try exact: setCode-localId
+  if(setCode && localId) {
     try {
-      const res = await fetch(`https://api.tcgdex.net/v2/en/cards/${card.set_code.toLowerCase()}-${card.local_id}`);
-      if(res.ok) { const d=await res.json(); if(d.id) return d; }
-    } catch {}
-    // Try pt for PT-BR cards
-    try {
-      const res = await fetch(`https://api.tcgdex.net/v2/pt/cards/${card.set_code.toLowerCase()}-${card.local_id}`);
+      const res = await fetch(`https://api.tcgdex.net/v2/en/cards/${setCode}-${localId}`);
       if(res.ok) { const d=await res.json(); if(d.id) return d; }
     } catch {}
   }
 
-  // Fallback: search by name in set
-  if(card.set_code) {
+  // 2. Try set endpoint to find the card by localId
+  if(setCode && localId) {
     try {
-      const query = encodeURIComponent(card.name?.split(' ')[0]?.toLowerCase() || '');
-      const res = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${query}&set.id=${card.set_code.toLowerCase()}`);
+      const res = await fetch(`https://api.tcgdex.net/v2/en/sets/${setCode}`);
+      if(res.ok) {
+        const set = await res.json();
+        const match = (set.cards||[]).find(c =>
+          String(c.localId) === localId ||
+          String(c.localId).padStart(3,'0') === localId.padStart(3,'0')
+        );
+        if(match) {
+          const detail = await fetch(`https://api.tcgdex.net/v2/en/cards/${match.id}`);
+          if(detail.ok) return await detail.json();
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Fallback: search by name
+  if(card.name) {
+    try {
+      const query = encodeURIComponent(card.name.split(' ')[0]);
+      const url = setCode
+        ? `https://api.tcgdex.net/v2/en/cards?name=${query}&set.id=${setCode}`
+        : `https://api.tcgdex.net/v2/en/cards?name=${query}`;
+      const res = await fetch(url);
       if(res.ok) {
         const arr = await res.json();
-        if(Array.isArray(arr) && arr.length>0) {
+        if(Array.isArray(arr) && arr.length > 0) {
           const detail = await fetch(`https://api.tcgdex.net/v2/en/cards/${arr[0].id}`);
           if(detail.ok) return await detail.json();
         }
       }
     } catch {}
   }
+
   return null;
 }
 
