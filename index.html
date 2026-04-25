@@ -560,14 +560,30 @@ async function callAPI(prompt, maxTokens) {
       ]}]
     })
   });
-  if(!res.ok) throw new Error(`API ${res.status}`);
+  if(!res.ok) throw new Error('API ' + res.status);
   const d = await res.json();
-  if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
-  const raw = d.content.map(b=>b.text||'').join('').replace(/```json[\s\S]*?```|```/g,'').trim();
-  // Find JSON object in response
-  const match = raw.match(/\{[\s\S]*\}/);
-  if(!match) throw new Error('Resposta inválida da IA');
-  return JSON.parse(match[0]);
+  if(d.error) throw new Error(d.error.message || JSON.stringify(d.error));
+  if(!d.content || !d.content.length) throw new Error('API sem conteudo: ' + JSON.stringify(d).substring(0,200));
+
+  const raw = d.content.map(function(b){ return b.text || ''; }).join('');
+  console.log('[PokeScan] raw:', raw.substring(0,400));
+
+  // Strip code fences
+  var stripped = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+
+  // Extract outermost { ... }
+  var start = stripped.indexOf('{');
+  var end = stripped.lastIndexOf('}');
+  if(start === -1 || end === -1 || end <= start) {
+    throw new Error('JSON nao encontrado. Resposta: ' + raw.substring(0,300));
+  }
+
+  var jsonStr = stripped.substring(start, end+1);
+  try {
+    return JSON.parse(jsonStr);
+  } catch(e) {
+    throw new Error('JSON invalido: ' + e.message + ' | Inicio: ' + jsonStr.substring(0,150));
+  }
 }
 
 // ── Render ────────────────────────────────────────────────
