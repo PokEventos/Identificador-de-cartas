@@ -368,8 +368,10 @@ async function runAnalysis() {
     const found = tcgVersionsArr.filter(v => v.versions.length > 0).length;
     setStep(1, 'done', `${found}/${names.length} encontradas no TCGDex`);
 
-    // ── STEP 3: Claude visual match ──
-    setStep(2, 'active');
+    // ── STEP 3: Claude visual match (card by card) ──
+    setStep(2, 'active', `0/${names.length} cartas...`);
+    // Patch visualMatch to update step progress
+    window._onCardMatched = (i, total) => setStep(2, 'active', `${i+1}/${total} cartas...`);
     const matched = await visualMatch(names, tcgVersionsArr);
     setStep(2, 'done', 'Comparação concluída');
 
@@ -486,64 +488,158 @@ function normalizeName(name) {
   return map[name] || name;
 }
 
-// ── STEP 3: Visual matching ───────────────────────────────
+// ── STEP 3: Visual matching with real images ─────────────
 async function visualMatch(cards, tcgVersionsArr) {
-  // Build a list with versions info to send to Claude
-  const cardSummaries = tcgVersionsArr.map((item, i) => {
-    const versions = item.versions.map(v => ({
-      id: v.id,
-      localId: v.localId,
-      set: v.set?.name,
-      setId: v.set?.id,
-      total: v.set?.cardCount?.total,
-      rarity: v.rarity,
-      image: v.image ? v.image + '/low.webp' : null,
-    }));
-    return {
-      index: i,
-      name: item.card.name,
-      position: item.card.position,
-      language: item.card.language,
-      hp: item.card.hp,
-      types: item.card.types,
-      is_trainer: item.card.is_trainer,
-      versions_count: versions.length,
-      versions: versions,
-    };
-  });
+  // Process one card at a time — send real TCGDex images for comparison
+  const matches = [];
 
-  const prompt = `Você é especialista em Pokémon TCG. Tenho uma foto com várias cartas.
+  for (let i = 0; i < tcgVersionsArr.length; i++) {
+    const item = tcgVersionsArr[i];
+    const card = item.card;
+    const versions = item.versions;
 
-Para cada carta listada abaixo, escolha qual versão do TCGDex corresponde VISUALMENTE à carta na foto.
-Compare: arte, borda, moldura, cores, estilo holográfico, idioma.
-
-Dados das cartas encontradas no TCGDex:
-${JSON.stringify(cardSummaries, null, 1)}
-
-Retorne SOMENTE JSON válido:
-{
-  "matches": [
-    {
-      "index": 0,
-      "name": "Charizard ex",
-      "matched_id": "obf-125",
-      "matched_set": "Obsidian Flames",
-      "matched_set_id": "obf",
-      "matched_local_id": "125",
-      "matched_total": "197",
-      "matched_rarity": "Special Illustration Rare",
-      "confidence": "high",
-      "reason": "Arte full art flamejante, borda dourada, corresponde exatamente ao OBF-125"
+    if (!versions.length) {
+      matches.push({ index: i, name: card.name, matched_id: null, confidence: 'low', reason: 'Nenhuma versão encontrada no TCGDex' });
+      continue;
     }
-  ]
+
+    try {
+      const match = await matchSingleCard(i, card, versions);
+      matches.push(match);
+      if(window._onCardMatched) window._onCardMatched(i, tcgVersionsArr.length);
+    } catch(e) {
+      console.warn('Match failed for', card.name, e.message);
+      // Fallback: pick first version
+      const v = versions[0];
+      matches.push({
+        index: i,
+        name: card.name,
+        matched_id: v.id,
+        matched_set: v.set?.name,
+        matched_set_id: v.set?.id,
+        matched_local_id: v.localId,
+        matched_total: v.set?.cardCount?.total,
+        matched_rarity: v.rarity,
+        confidence: 'low',
+        reason: 'Fallback automático (erro na comparação visual)'
+      });
+    }
+  }
+
+  return matches;
 }
 
-confidence: "high" (certeza), "medium" (provável), "low" (melhor opção disponível)
-Se não houver versão compatível, use matched_id: null.
-Responda SOMENTE o JSON.`;
+async function matchSingleCard(index, card, versions) {
+  // Download up to 5 versions as base64 to send to Claude
+  const versionImages = await Promise.allSettled(
+    versions.slice(0, 5).map(async v => {
+      if (!v.image) return null;
+      const url = v.image + '/low.webp';
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ id: v.id, b64: reader.result.split(',')[1], mime: blob.type || 'image/webp' });
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      } catch { return null; }
+    })
+  );
 
-  const r = await callAPI(prompt, 3000);
-  return r.matches || [];
+  const validImages = versionImages
+    .filter(r => r.status === 'fulfilled' && r.value)
+    .map(r => r.value);
+
+  // Build version metadata list
+  const versionMeta = versions.slice(0, 5).map((v, vi) => ({
+    index: vi,
+    id: v.id,
+    localId: v.localId,
+    set: v.set?.name,
+    setId: v.set?.id,
+    total: v.set?.cardCount?.total,
+    rarity: v.rarity,
+    hasImage: !!validImages.find(img => img.id === v.id)
+  }));
+
+  // Build message content: original photo + version images
+  const content = [
+    { type: 'text', text: `Você é especialista em Pokémon TCG.
+
+Estou te mostrando:
+1. Uma FOTO com várias cartas (primeira imagem)
+2. Até 5 versões da carta "${card.name}" do banco TCGDex (imagens seguintes)
+
+A carta "${card.name}" está na posição: ${card.position}
+Idioma da carta na foto: ${card.language}
+HP visível: ${card.hp || 'não visível'}
+
+Versões disponíveis:
+${JSON.stringify(versionMeta, null, 1)}
+
+Compare VISUALMENTE a carta na foto com cada versão do TCGDex.
+Considere: arte, cores, bordas, estilo holográfico, moldura.
+
+Responda SOMENTE JSON:
+{
+  "index": ${index},
+  "name": "${card.name}",
+  "matched_id": "obf-125",
+  "matched_set": "Obsidian Flames",
+  "matched_set_id": "obf",
+  "matched_local_id": "125",
+  "matched_total": "197",
+  "matched_rarity": "Special Illustration Rare",
+  "confidence": "high",
+  "reason": "Arte e cores idênticas à versão OBF"
+}
+Responda SOMENTE o JSON.` },
+    // Original photo
+    { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: currentImageBase64 } }
+  ];
+
+  // Add TCGDex version images
+  validImages.forEach(img => {
+    content.push({ type: 'image', source: { type: 'base64', media_type: img.mime || 'image/webp', data: img.b64 } });
+  });
+
+  // Call API with multiple images
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 800,
+      messages: [{ role: 'user', content }]
+    })
+  });
+
+  if (!res.ok) throw new Error('API ' + res.status);
+  const d = await res.json();
+  if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
+
+  const raw = d.content.map(b => b.text || '').join('');
+  const stripped = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('JSON não encontrado: ' + raw.substring(0,200));
+
+  const result = JSON.parse(stripped.substring(start, end+1));
+
+  // Enrich with full version data
+  const matched = versions.find(v => v.id === result.matched_id);
+  if (matched) {
+    result.matched_set = result.matched_set || matched.set?.name;
+    result.matched_set_id = result.matched_set_id || matched.set?.id;
+    result.matched_local_id = result.matched_local_id || matched.localId;
+    result.matched_total = result.matched_total || matched.set?.cardCount?.total;
+    result.matched_rarity = result.matched_rarity || matched.rarity;
+  }
+
+  return result;
 }
 
 // ── API call ──────────────────────────────────────────────
