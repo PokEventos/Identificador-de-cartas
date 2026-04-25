@@ -1,7 +1,9 @@
-export const config = { runtime: 'edge' };
+export const config = {
+  runtime: 'edge',
+  maxDuration: 60,
+};
 
 export default async function handler(req) {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
